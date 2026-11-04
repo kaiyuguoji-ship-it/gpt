@@ -33,8 +33,10 @@ npm run dev
 
 安装依赖可使用 `npm ci`。不要将 `.next` 当作静态输出目录，也不要使用 `next-on-pages` 构建此静态原型。
 
-如果使用 Workers 的 Git 构建，构建命令同上，部署命令为 `npx wrangler deploy`，仓库中的 `wrangler.jsonc` 指定静态资产目录。Workers 项目名称应与配置的 `gpt` 一致，或按实际名称修改配置。
+如果使用 Workers 的 Git 构建，构建命令同上，部署命令为 `npm run deploy`，仓库中的 `wrangler.jsonc` 指定静态资产目录。Workers 项目名称应与配置的 `gpt` 一致，或按实际名称修改配置。
 
 部署后验证 `/` 与 `/centers/1/` 至 `/centers/8/`，直接刷新二级页面仍应正常；不存在的路径应返回 404。Agent 交互仍在浏览器中模拟执行。
 
-Workers 构建设置应使用仓库根目录、main 分支，以及最新提交。部署命令明确填写 `npx wrangler deploy --config wrangler.jsonc`；不要使用自动框架迁移或 OpenNext 部署命令。如果日志出现 OpenNext migrate 或 Missing required next.config file，请先检查构建根目录、提交版本和部署命令。
+Workers 构建设置应使用仓库根目录、main 分支，以及最新提交。部署命令明确填写 `npm run deploy`；不要使用自动框架迁移或 OpenNext 部署命令。如果日志出现 OpenNext migrate 或 Missing required next.config file，请先检查构建根目录、提交版本和部署命令。
+
+本地部署预检：`npm run build && npm run deploy:check`。预检不会发布。Cloudflare 已保存的构建设置独立于 Git 仓库；若原设置包含 OpenNext，需将部署命令改为 `npm run deploy`。
