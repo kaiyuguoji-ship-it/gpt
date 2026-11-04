@@ -1,0 +1,7 @@
+import type { Metadata } from 'next';
+import Link from 'next/link';
+import { Bot, LayoutDashboard, Radio, ArrowUpRight } from 'lucide-react';
+import { centers } from '@/lib/centers';
+import './globals.css';
+export const metadata: Metadata = {title:'SWANYO OS · Agent 工作台',description:'亚马逊跨境电商八大业务中心 AI Agent ERP 原型'};
+export default function Layout({children}:{children:React.ReactNode}) {return <html lang="zh-CN"><body><aside className="sidebar"><Link href="/" className="brand"><Bot size={30}/><div>SWANYO <span>OS</span><small>8-Core Agent Engine</small></div></Link><div className="nav-label">WORKSPACE</div><Link href="/" className="overview"><LayoutDashboard size={17}/>总览工作台<ArrowUpRight size={14}/></Link><div className="nav-label">BUSINESS CENTERS / 业务中心</div><nav>{centers.map((c,i)=><Link key={c.en} href={`/centers/${i+1}`}><c.icon size={17}/><span className="nav-number">0{i+1}</span>{c.name.replace(' 中心','')}</Link>)}</nav><div className="store"><div><span className="pulse"/> CRAVORA-JP <span className="jp">JP</span></div><small><Radio size={12}/> Agent 引擎巡检中 · 演示</small></div></aside><div className="workspace"><header><span>工作空间 <span className="muted">/</span> <strong>Agent 工作台</strong></span><div className="header-status"><span className="pulse"/>系统运行正常 <span className="demo">DEMO</span><span className="avatar">S</span></div></header>{children}<footer>SWANYO OS © 2026 <span>8 个业务中心 · 一个智能决策引擎</span></footer></div></body></html>}
