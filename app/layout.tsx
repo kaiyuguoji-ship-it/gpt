@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { SidebarNavigation } from '@/components/sidebar-navigation';
 import '@fontsource-variable/inter';
 import './globals.css';
+import './navigation.css';
 
 export const metadata: Metadata = {
   title: 'SWANYO OS · Amazon Business Platform',
