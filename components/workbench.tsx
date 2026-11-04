@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowRight, ArrowUpRight, Sparkles, Activity, CircleArrowUpRight, Boxes, Truck, Image as ImageIcon, Search, ShieldCheck, Microscope, Wallet, TrendingUp, Megaphone } from 'lucide-react';
+import { ArrowRight, ArrowUpRight, Sparkles, Activity, Boxes, Truck, Image as ImageIcon, Search, ShieldCheck, Microscope, Wallet, TrendingUp, Megaphone } from 'lucide-react';
 import { centers } from '@/lib/centers';
 
 const icons = [TrendingUp, Microscope, Wallet, ImageIcon, Search, Megaphone, Boxes, Truck, ShieldCheck];
@@ -51,7 +51,7 @@ export function Workbench({ centerId }: { centerId?: number }) {
           const Icon = icons[index];
           return (
             <Link href={`/centers/${index + 1}/`} className="application-card" key={center.en}>
-              <div className="application-card-top"><span className="application-icon"><Icon size={21} strokeWidth={1.65}/></span><span className="application-index">{String(index + 1).padStart(2, '0')}</span><CircleArrowUpRight size={17} className="application-arrow"/></div>
+              <div className="application-card-top"><span className="application-icon"><Icon size={21} strokeWidth={1.65}/></span><span className="application-index">{String(index + 1).padStart(2, '0')}</span><ArrowUpRight size={17} className="application-arrow"/></div>
               <h3>{center.name}</h3><p>{center.description}</p>
               <div className="application-card-bottom"><span>进入工作空间</span><ArrowRight size={14}/></div>
             </Link>
