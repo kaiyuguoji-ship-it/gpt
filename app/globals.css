@@ -149,3 +149,37 @@ a{text-decoration:none;color:inherit}button{font:inherit;cursor:pointer}button:d
   .nav-link{grid-template-columns:17px 21px minmax(0,1fr);column-gap:5px;padding-left:6px;padding-right:5px}
   .nav-name{font-size:12px}
 }
+
+
+/* Sidebar rhythm pass: more breathing room without widening the rail */
+.sidebar{padding-top:21px;padding-bottom:16px}
+.brand{padding-bottom:28px}
+.nav-label{margin-top:11px;margin-bottom:12px}
+.app-label{margin-top:25px}
+.sidebar nav{gap:6px}
+.nav-link{
+  min-height:44px;
+  padding:10px 8px;
+  border-radius:10px;
+  grid-template-columns:19px 22px minmax(0,1fr);
+  column-gap:7px;
+}
+.nav-link>svg{width:17px;height:17px}
+.nav-index{line-height:22px}
+.nav-name{line-height:22px}
+.overview-link{
+  min-height:43px;
+  padding-top:10px;
+  padding-bottom:10px;
+  margin-bottom:7px;
+}
+.sidebar-bottom{padding-top:17px}
+@media(max-width:1150px){
+  .sidebar nav{gap:5px}
+  .nav-link{min-height:42px;padding-top:9px;padding-bottom:9px}
+}
+@media(max-width:760px){
+  .sidebar{padding-top:14px;padding-bottom:13px}
+  .sidebar nav{gap:5px}
+  .nav-link,.overview-link{min-height:39px;padding:10px 0}
+}
