@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Activity, LayoutDashboard } from 'lucide-react';
-import { centers } from '@/lib/centers';
+import { Activity } from 'lucide-react';
+import { SidebarNavigation } from '@/components/sidebar-navigation';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -18,18 +18,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <span className="brand-mark">S</span>
             <span className="brand-copy"><strong>SWANYO<span>.</span></strong><small>BUSINESS OPERATING SYSTEM</small></span>
           </Link>
-          <div className="nav-label">WORKSPACE</div>
-          <Link href="/" className="nav-link overview-link"><LayoutDashboard size={17}/><span>总览工作台</span></Link>
-          <div className="nav-label app-label">APPLICATIONS <span>09</span></div>
-          <nav aria-label="业务应用">
-            {centers.map((center, index) => (
-              <Link className="nav-link" key={center.en} href={`/centers/${index + 1}/`}>
-                <center.icon size={17} strokeWidth={1.7}/>
-                <span className="nav-index">{String(index + 1).padStart(2, '0')}</span>
-                <span className="nav-name">{center.name}</span>
-              </Link>
-            ))}
-          </nav>
+          <SidebarNavigation />
           <div className="sidebar-bottom">
             <div className="system-state"><i/>平台工作空间</div>
             <small>SWANYO OS · V1.0</small>
