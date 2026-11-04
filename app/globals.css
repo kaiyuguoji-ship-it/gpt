@@ -756,3 +756,42 @@ body{font-family:var(--font-ui);font-size:var(--text-base);line-height:var(--lea
   .page-heading h1{font-size:28px;line-height:36px}
   .application-card h3{font-size:15px}
 }
+
+/* User-supplied Linear measurements, mapped onto the current light workspace. */
+:root {
+  --font-family: "Inter Variable", "SF Pro Display", -apple-system, system-ui,
+    "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  --font-ui: var(--font-family);
+  --text-primary: #f7f8f8;
+  --text-secondary: #8a8f98;
+}
+body { font-family: var(--font-family); font-feature-settings: "cv01", "ss03";
+  -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+button, input { font-family: inherit; font-feature-settings: inherit; }
+.hero h1, .page-heading h1 {
+  font-size: 64px; font-weight: 510; line-height: 64px; letter-spacing: -1.408px;
+  overflow-wrap: anywhere;
+}
+.section-heading h2 {
+  font-size: 48px; font-weight: 510; line-height: 48px; letter-spacing: -1.056px;
+  max-width: 1250px; color: var(--text-secondary);
+}
+.hero > p, .page-heading p {
+  font-size: 16px; font-weight: 400; line-height: 24px; letter-spacing: normal;
+}
+.hero-note, .platform-note p {
+  font-size: 15px; font-weight: 400; line-height: 24px; letter-spacing: -0.165px;
+  color: var(--text-secondary);
+}
+.sidebar .nav-name, .sidebar .overview-link > span,
+.topbar, .breadcrumb, .topbar-right {
+  font-size: 13px; font-weight: 400; line-height: 19.5px; letter-spacing: normal;
+}
+.sidebar .nav-name, .sidebar .overview-link > span { color: var(--text-secondary); }
+.section-heading { flex-wrap: wrap; gap: 16px; }
+@media(max-width:760px) {
+  .hero h1, .page-heading h1 {
+    font-size: 38px; font-weight: 510; line-height: 41.8px; letter-spacing: -0.836px;
+  }
+  .section-heading h2 { font-size: 32px; line-height: 35.2px; letter-spacing: -0.704px; }
+}
