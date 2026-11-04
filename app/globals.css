@@ -248,3 +248,50 @@ a{text-decoration:none;color:inherit}button{font:inherit;cursor:pointer}button:d
   .sidebar .overview-link>span{display:none}
   .sidebar .nav-link:not(.overview-link){min-height:39px;padding:10px 0}
 }
+
+
+/* Compact rail sized to the user's marked reference area */
+@media(min-width:761px){
+  .sidebar{
+    width:165px;
+    padding-left:9px;
+    padding-right:9px;
+  }
+  .workspace{margin-left:193px}
+  .brand{
+    gap:7px;
+    padding-left:4px;
+    padding-right:0;
+  }
+  .brand-mark{flex-basis:32px;width:32px;height:32px}
+  .brand-copy strong{font-size:15px;letter-spacing:-.65px}
+  .brand-copy small{
+    font-size:6.2px;
+    letter-spacing:.25px;
+    line-height:10px;
+  }
+  .sidebar .nav-link:not(.overview-link){
+    grid-template-columns:17px 18px minmax(0,1fr);
+    column-gap:5px;
+    padding-left:5px;
+    padding-right:4px;
+    min-height:43px;
+  }
+  .sidebar .nav-link>svg{width:16px;height:16px}
+  .sidebar .nav-index{width:18px;font-size:10px}
+  .sidebar .nav-name{font-size:12px;line-height:20px}
+  .sidebar .overview-link{
+    grid-template-columns:18px minmax(0,1fr);
+    column-gap:8px;
+    padding-left:7px;
+    padding-right:4px;
+    min-height:42px;
+  }
+  .sidebar .overview-link>span{font-size:12px}
+  .sidebar .nav-label{padding-left:7px;padding-right:5px}
+  .sidebar-bottom{padding-left:7px;padding-right:4px}
+}
+@media(min-width:761px) and (max-width:1150px){
+  .sidebar{width:165px}
+  .workspace{margin-left:193px}
+}
