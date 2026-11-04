@@ -40,25 +40,26 @@ export function SidebarNavigation() {
           {collapsed ? <PanelLeftOpen size={17}/> : <PanelLeftClose size={17}/>}
         </button>
       </div>
-
-      <div className="nav-label">WORKSPACE</div>
-      <Link href="/" title="总览工作台" className="nav-link overview-link" aria-current={isHome ? 'page' : undefined}>
-        <LayoutDashboard size={17}/><span>总览工作台</span>
-      </Link>
-      <div className="nav-label app-label">APPLICATIONS <span>09</span></div>
-      <nav aria-label="业务应用">
-        {centers.map((center, index) => {
-          const href = `/centers/${index + 1}/`;
-          const active = pathname === href || pathname === href.slice(0, -1);
-          return (
-            <Link className="nav-link" key={center.en} href={href} title={center.name} aria-current={active ? 'page' : undefined}>
-              <center.icon size={17} strokeWidth={1.7}/>
-              <span className="nav-index">{String(index + 1).padStart(2, '0')}</span>
-              <span className="nav-name">{center.name}</span>
-            </Link>
-          );
-        })}
-      </nav>
+      <div className="sidebar-main">
+        <div className="nav-label">WORKSPACE</div>
+        <Link href="/" title="总览工作台" className="nav-link overview-link" aria-current={isHome ? 'page' : undefined}>
+          <LayoutDashboard size={17}/><span>总览工作台</span>
+        </Link>
+        <div className="nav-label app-label">APPLICATIONS <span>09</span></div>
+        <nav aria-label="业务应用">
+          {centers.map((center, index) => {
+            const href = `/centers/${index + 1}/`;
+            const active = pathname === href || pathname === href.slice(0, -1);
+            return (
+              <Link className="nav-link" key={center.en} href={href} title={center.name} aria-current={active ? 'page' : undefined}>
+                <center.icon size={17} strokeWidth={1.7}/>
+                <span className="nav-index">{String(index + 1).padStart(2, '0')}</span>
+                <span className="nav-name">{center.name}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
       <div className="sidebar-bottom">
         <div className="system-state"><i/><span>平台工作空间</span></div>
         <small>SWANYO OS · V1.0</small>
