@@ -1,26 +1,26 @@
 /* Isolated navigation rules: legacy sidebar overrides do not affect this rail. */
 .navigation-rail {
   position: fixed; inset: 0 auto 0 0; z-index: 30;
-  width: 248px; padding: 16px 12px;
+  width: 204px; padding: 16px 12px;
   display: flex; flex-direction: column;
   background: #f7f7f8; border-right: 1px solid #e6e6e9;
   color: #52525b; font-family: var(--font-family);
   transition: width 200ms ease;
 }
 .rail-header { display: flex; align-items: center; gap: 8px; min-height: 40px; margin-bottom: 24px; }
-.rail-brand { display: flex; flex: 1; align-items: center; gap: 10px; min-width: 0; padding-left: 4px; }
+.rail-brand { display: flex; flex: 1; align-items: center; gap: 7px; min-width: 0; padding-left: 0; }
 .rail-mark { width: 28px; height: 28px; flex: none; display: grid; place-items: center; background: #27272a; color: #fff; border-radius: 7px; font-size: 15px; font-weight: 600; }
 .rail-brand-copy strong { font-size: 14px; line-height: 20px; font-weight: 600; letter-spacing: -.2px; color: #27272a; }
 .rail-brand-copy strong span { color: #71717a; }
-.rail-brand-copy small { display: block; font-size: 7px; line-height: 12px; letter-spacing: .4px; color: #71717a; white-space: nowrap; }
+.rail-brand-copy small { display: block; font-size: 6px; line-height: 12px; letter-spacing: 0; color: #71717a; white-space: nowrap; }
 .rail-toggle { display: grid; place-items: center; width: 36px; height: 36px; flex: 0 0 36px; padding: 0; border: 0; border-radius: 7px; background: transparent; color: #71717a; }
 .rail-toggle svg,.rail-link svg { display: block; width: 18px; height: 18px; flex: none; }
 .rail-toggle:hover { background: #eaeaed; color: #27272a; }
 .rail-main { min-height: 0; flex: 1; overflow-y: auto; scrollbar-width: thin; }
 .rail-label { display: flex; justify-content: space-between; padding: 0 12px; margin: 0 0 8px; font-size: 10px; line-height: 16px; font-weight: 500; letter-spacing: .7px; color: #85858f; }
 .rail-app-label { margin-top: 26px; }
-.rail-main nav { display: flex; flex-direction: column; gap: 4px; }
-.rail-link { display: flex; align-items: center; gap: 12px; min-height: 40px; padding: 9px 12px; border-radius: 7px; color: #202024; transition: background 140ms ease, color 140ms ease; }
+.rail-main nav { display: flex; flex-direction: column; gap: 8px; }
+.rail-link { display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 11px 12px; border-radius: 7px; color: #202024; transition: background 140ms ease, color 140ms ease; }
 .rail-name { font-size: 13px; line-height: 22px; font-weight: 400; letter-spacing: .1px; white-space: nowrap; }
 .rail-index { display: none; }
 .rail-link:hover { background: #ededf0; color: #000; }
@@ -31,7 +31,7 @@
 .rail-state { display: flex; align-items: center; gap: 8px; font-size: 12px; line-height: 20px; color: #62626c; }
 .rail-state i { width: 6px; height: 6px; border-radius: 50%; background: #58a780; }
 .rail-footer small { display: block; margin-top: 6px; font-size: 10px; line-height: 16px; color: #92929b; }
-body:has(.navigation-rail) .workspace { margin-left: 248px; transition: margin-left 200ms ease; }
+body:has(.navigation-rail) .workspace { margin-left: 204px; transition: margin-left 200ms ease; }
 body:has(.navigation-rail) .site-footer { margin-left: auto; }
 .navigation-rail.is-collapsed { width: 64px; padding: 16px 10px; }
 .navigation-rail.is-collapsed .rail-header { justify-content: center; }

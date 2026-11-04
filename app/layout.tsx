@@ -3,6 +3,7 @@ import { SidebarNavigation } from '@/components/sidebar-navigation';
 import '@fontsource-variable/inter';
 import './globals.css';
 import './navigation.css';
+import './workspace.css';
 
 export const metadata: Metadata = {
   title: 'SWANYO OS · Amazon Business Platform',
