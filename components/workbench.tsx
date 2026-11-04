@@ -38,14 +38,7 @@ export function Workbench({ centerId }: { centerId?: number }) {
   }
 
   return (
-    <main className="page-shell overview-shell">
-      <section className="hero">
-        <div className="eyebrow">AMAZON BUSINESS APPLICATION PLATFORM</div>
-        <h1>把复杂经营，<br/>变成清晰的每一步。</h1>
-        <p>九大专业应用，覆盖市场研究、产品研发、商业决策与日常运营。</p>
-        <div className="hero-note"><Sparkles size={15}/> 一个统一入口，九个独立业务工作空间。</div>
-      </section>
-      <div className="section-heading"><div><h2>业务应用</h2><p>BUSINESS APPLICATIONS</p></div><span>09 APPLICATIONS</span></div>
+    <main className="page-shell overview-shell" aria-label="业务应用">
       <div className="application-grid">
         {centers.map((center, index) => {
           const Icon = icons[index];
