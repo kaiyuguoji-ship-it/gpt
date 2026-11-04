@@ -27,7 +27,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         <div className="workspace">
           <header className="topbar">
             <div className="breadcrumb"><span>Workspace</span><b>/</b><strong>Amazon Business Platform</strong></div>
-            <div className="topbar-right"><span className="marketplace">日本站 <b>JP</b></span><span className="top-avatar">S</span></div>
+            <div className="topbar-right"><span className="workspace-label">PERSONAL WORKSPACE</span><span className="top-avatar" aria-label="用户账户">S</span></div>
           </header>
           {children}
           <footer className="site-footer"><span>SWANYO OS © 2026</span><span>NINE APPLICATIONS · ONE WORKSPACE</span></footer>
