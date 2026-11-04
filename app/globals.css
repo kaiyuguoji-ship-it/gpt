@@ -707,3 +707,52 @@ html,body{background:#fff}
 @media(prefers-reduced-motion:reduce){
   .application-card,.module-card,.application-card::before,.module-card::before{transition:none!important}
 }
+/* SWANYO typography system: Linear-inspired scale with Apple restraint */
+:root{
+  --font-ui:Inter, -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  --font-mono:'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+  --text-xs:11px;
+  --text-sm:13px;
+  --text-base:14px;
+  --text-lg:16px;
+  --text-xl:20px;
+  --text-2xl:28px;
+  --text-display:48px;
+  --leading-tight:1.2;
+  --leading-normal:1.55;
+}
+body{font-family:var(--font-ui);font-size:var(--text-base);line-height:var(--leading-normal);font-feature-settings:'ss01' on,'cv11' on;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+.topbar,.breadcrumb,.topbar-right{font-family:var(--font-ui);font-size:13px;line-height:20px;letter-spacing:-.01em}
+.nav-label{font-family:var(--font-ui);font-size:10px;line-height:16px;letter-spacing:.09em;font-weight:600}
+.sidebar .nav-name{font-family:var(--font-ui);font-size:12px;line-height:19px;font-weight:500;letter-spacing:-.015em}
+.sidebar .nav-index{font-family:var(--font-mono);font-size:10px;line-height:19px;font-variant-numeric:tabular-nums}
+.sidebar .overview-link>span{font-family:var(--font-ui);font-size:13px;line-height:20px;font-weight:550;letter-spacing:-.015em}
+.eyebrow{font-family:var(--font-mono);font-size:10px;line-height:16px;letter-spacing:.12em;font-weight:500}
+.hero h1{font-family:var(--font-ui);font-size:clamp(40px,4.1vw,52px);line-height:1.12;letter-spacing:-.045em;font-weight:600}
+.hero>p{font-family:var(--font-ui);font-size:15px;line-height:1.65;letter-spacing:-.012em}
+.hero-note{font-size:13px;line-height:20px;letter-spacing:-.01em}
+.section-heading h2{font-family:var(--font-ui);font-size:20px;line-height:28px;letter-spacing:-.025em;font-weight:600}
+.section-heading p,.section-heading>span,.module-count{font-family:var(--font-mono);font-size:10px;line-height:16px;letter-spacing:.08em}
+.application-card h3{font-family:var(--font-ui);font-size:16px;line-height:23px;font-weight:590;letter-spacing:-.02em}
+.application-card>p{font-family:var(--font-ui);font-size:13px;line-height:20px;letter-spacing:-.01em}
+.application-card-bottom{font-family:var(--font-ui);font-size:12px;line-height:18px}
+.page-heading h1{font-family:var(--font-ui);font-size:32px;line-height:40px;letter-spacing:-.035em;font-weight:600}
+.page-heading p{font-family:var(--font-ui);font-size:14px;line-height:22px;letter-spacing:-.01em}
+.module-toolbar strong{font-family:var(--font-ui);font-size:15px;line-height:22px;font-weight:600}
+.module-toolbar>div>span{font-family:var(--font-mono);font-size:11px;line-height:16px}
+.module-card strong{font-family:var(--font-ui);font-size:15px;line-height:22px;font-weight:590;letter-spacing:-.015em}
+.module-card-index,.module-card-foot{font-family:var(--font-mono);font-size:11px;line-height:17px}
+.empty-workspace h2{font-family:var(--font-ui);font-size:16px;line-height:24px;font-weight:590;letter-spacing:-.02em}
+.empty-workspace p{font-family:var(--font-ui);font-size:13px;line-height:21px;letter-spacing:-.005em}
+.text-link{font-family:var(--font-ui);font-size:13px;line-height:20px;font-weight:500}
+.platform-note strong{font-family:var(--font-ui);font-size:14px;line-height:21px;font-weight:590}
+.platform-note p{font-family:var(--font-ui);font-size:13px;line-height:20px}
+.site-footer{font-family:var(--font-mono);font-size:10px;line-height:16px;letter-spacing:.04em}
+.system-state{font-family:var(--font-ui);font-size:11px;line-height:17px}
+.sidebar-bottom small{font-family:var(--font-mono);font-size:9px;line-height:14px;letter-spacing:.03em}
+@media(max-width:760px){
+  .hero h1{font-size:36px;line-height:1.16;letter-spacing:-.04em}
+  .hero>p{font-size:14px}
+  .page-heading h1{font-size:28px;line-height:36px}
+  .application-card h3{font-size:15px}
+}
