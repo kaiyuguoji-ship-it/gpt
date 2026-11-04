@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { Activity } from 'lucide-react';
 import { SidebarNavigation } from '@/components/sidebar-navigation';
 import './globals.css';
@@ -13,17 +12,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN">
       <body>
-        <aside className="sidebar">
-          <Link href="/" className="brand" aria-label="SWANYO OS 首页">
-            <span className="brand-mark">S</span>
-            <span className="brand-copy"><strong>SWANYO<span>.</span></strong><small>BUSINESS OPERATING SYSTEM</small></span>
-          </Link>
-          <SidebarNavigation />
-          <div className="sidebar-bottom">
-            <div className="system-state"><i/>平台工作空间</div>
-            <small>SWANYO OS · V1.0</small>
-          </div>
-        </aside>
+        <SidebarNavigation />
         <div className="workspace">
           <header className="topbar">
             <div className="breadcrumb"><span>Workspace</span><b>/</b><strong>Amazon Business Platform</strong></div>
