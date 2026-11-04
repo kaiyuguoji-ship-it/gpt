@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { Activity } from 'lucide-react';
 import { SidebarNavigation } from '@/components/sidebar-navigation';
 import './globals.css';
 
