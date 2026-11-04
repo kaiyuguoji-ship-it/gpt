@@ -5,6 +5,7 @@ import './globals.css';
 import './navigation.css';
 import './workspace.css';
 import './theme.css';
+import './market.css';
 
 export const metadata: Metadata = {
   title: 'SWANYO OS · Amazon Business Platform',

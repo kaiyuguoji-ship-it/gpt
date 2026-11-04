@@ -9,11 +9,15 @@ Next.js App Router + TypeScript + Tailwind CSS 4 + Lucide React.
 - 主工作区保持纯白，卡片和分割线使用轻量浅灰。
 - 响应式导航与应用页面。
 - 市场情报、产品研发、商业决策、视觉创意、Listing SEO、广告运营、FBA 库存、供应链运营、数据审计九大应用。
-- 当前仍为前端架构与视觉原型；不展示虚构的实时销售、库存或 Agent 数据，也未连接 Amazon API、数据库或模型服务。
+- 市场情报中心已增加真实任务管理后台：对话需求、条件确认、任务记录、取消及审计。数据库需按部署说明绑定 D1。
+- 模型、市场数据连接器和自动研究执行器尚未接入；页面如实显示阻塞状态，不展示虚构市场结果。
+- 其余八个业务中心保持原有导航原型。
+
+完整配置与能力边界见 [市场情报后台说明](docs/market-backend.md)。
 
 ## 本地运行
 
-需要 Node.js >= 20.9。
+需要 Node.js >= 22.18（含测试运行时）。
 
 ```sh
 npm ci
@@ -22,7 +26,9 @@ npm run dev
 
 浏览器访问 http://localhost:3000。静态生产构建：`npm run build`，输出到 `out/`。
 
-## Cloudflare Pages
+## Cloudflare 部署
+
+完整后台使用仓库内 `wrangler.jsonc` 部署至 Workers。仅静态前端可沿用以下 Pages 设置；Pages 静态部署不会提供新增 API。
 
 - 生产分支：`main`（合并本次设计分支后生效）
 - 根目录：仓库根目录

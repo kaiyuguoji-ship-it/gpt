@@ -1,0 +1,21 @@
+{
+  "name": "gpt-local",
+  "compatibility_date": "2026-11-04",
+  "assets": {
+    "directory": "./out",
+    "not_found_handling": "404-page",
+    "binding": "ASSETS",
+    "run_worker_first": [
+      "/api/*"
+    ]
+  },
+  "main": "server/index.ts",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "swanyo-market-local",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ]
+}
