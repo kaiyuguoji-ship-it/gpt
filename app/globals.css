@@ -295,3 +295,40 @@ a{text-decoration:none;color:inherit}button{font:inherit;cursor:pointer}button:d
   .sidebar{width:165px}
   .workspace{margin-left:193px}
 }
+
+
+/* ERP sidebar sizing system: compact expanded rail + icon-only collapsed rail */
+@media(min-width:761px){
+  .sidebar{
+    width:200px;
+    padding-left:12px;
+    padding-right:12px;
+  }
+  .workspace{margin-left:228px}
+  .brand{gap:9px;padding-left:5px;padding-right:3px}
+  .brand-mark{flex:0 0 34px;width:34px;height:34px}
+  .brand-copy strong{font-size:16px;letter-spacing:-.55px}
+  .brand-copy small{font-size:7px;letter-spacing:.45px}
+  .sidebar .nav-link:not(.overview-link){
+    grid-template-columns:19px 22px minmax(0,1fr);
+    column-gap:7px;
+    min-height:44px;
+    padding:10px 8px;
+  }
+  .sidebar .nav-link>svg{width:17px;height:17px}
+  .sidebar .nav-index{width:22px;font-size:11px;line-height:22px}
+  .sidebar .nav-name{font-size:14px;line-height:22px;font-weight:500}
+  .sidebar .overview-link{
+    grid-template-columns:19px minmax(0,1fr);
+    column-gap:10px;
+    min-height:44px;
+    padding:10px 8px;
+  }
+  .sidebar .overview-link>span{font-size:14px;line-height:22px}
+  .sidebar nav{gap:5px}
+}
+/* Compact icon-only rail for future collapse toggle */
+@media(max-width:760px){
+  .sidebar{width:64px}
+  .workspace{margin-left:80px}
+}
