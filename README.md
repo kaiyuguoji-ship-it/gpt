@@ -11,9 +11,15 @@
 
 前端各自输出静态页面，并用极小的 Worker 将同源 `/api/*` 请求转发到 API Service Binding。数据库、业务逻辑、密钥只存在 API 项目。业务前端不发布管理页面，并拒绝转发管理接口；后端也独立校验管理员会话。
 
+## 当前市场情报页面：前端演示
+
+业务网站 `/centers/1/` 当前按效果图提供四个研究模块、筛选表单、演示任务、研究历史及报告结构。记录只保存在当前浏览器，未连接真实后端、Agent 或亚马逊数据。详见 [前端演示说明](docs/market-frontend-demo.md)。管理后台与 API 是独立项目，其能力不代表业务演示页面已接入真实执行。
+
+仅发布这次业务前端，可在 **Cloudflare Pages** 连接本仓库，构建根目录选仓库根目录，设置 `NODE_VERSION=24`，构建命令填写 `npm run build -w @swanyo/web`，输出目录填写 `apps/web/out`。使用 npm 11.19.1 安装统一锁文件；如构建环境的 npm 版本较旧，可使用构建命令 `npx --yes npm@11.19.1 ci && npm run build -w @swanyo/web`。Pages 静态发布无需绑定 API 服务。
+
 ## 安装与验证
 
-使用 Node.js 24 和 npm 11。在仓库根目录执行：
+使用 Node.js 24 和 npm 11.19.1。在仓库根目录执行：
 
 ```sh
 npm ci

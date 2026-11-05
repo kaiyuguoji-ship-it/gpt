@@ -1,124 +1,90 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowRight, CheckCircle2, Circle, LockKeyhole, RefreshCw, Search, TrendingUp } from 'lucide-react';
-import { emptyBrief, marketplaces, missingConditions, skills, statusLabels, suggestBrief } from '@swanyo/shared/market';
-import type { Brief, Task, TaskDetail } from '@swanyo/shared/market';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowDownToLine, ArrowRight, Check, ChevronDown, ClipboardList, FileText, FlaskConical, Layers3, MoreHorizontal, Pause, Play, Plus, RefreshCw, RotateCcw, Search, ShieldCheck, Swords, X } from 'lucide-react';
+import { activeFields, advancedFields, createDemoRecord, emptyDraft, fieldValue, moduleById, modules, parseRecords, pendingFields, reportMarkdown, seedRecords, statusLabels, STORE_KEY, transitionRecord, validateDraft } from '@/lib/market-demo';
+import type { DemoRecord, DemoStatus, Draft, Field, ModuleId, Values } from '@/lib/market-demo';
 
-type Health = { backend: boolean; storage: boolean; accessConfigured: boolean; model: boolean; marketData: boolean; runner: boolean };
-async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(path, { ...init, headers: { 'Content-Type': 'application/json', ...init?.headers } });
-  const type = response.headers.get('Content-Type') ?? '';
-  if (!type.includes('application/json')) throw new Error('当前站点尚未接入后台接口。请部署 Worker 后再创建研究任务。');
-  const data = await response.json();
-  if (!response.ok) throw new Error(data.error ?? '请求失败，请重试');
-  return data as T;
+type View = 'research' | 'tasks' | 'reports';
+type Filter = 'all' | DemoStatus;
+const moduleIcons = [Search, Swords, Layers3, ShieldCheck];
+const date = (value:string) => new Intl.DateTimeFormat('zh-CN',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(value));
+const newDrafts = ():Record<ModuleId,Draft> => ({discovery:emptyDraft(),competition:emptyDraft(),segments:emptyDraft(),opportunity:emptyDraft()});
+const filterMatch = (record:DemoRecord,filter:Filter) => filter==='all'||record.status===filter;
+
+function FieldControl({field,values,onChange}:{field:Field;values:Values;onChange:(key:string,value:string)=>void}) {
+ const missing=field.kind==='range'?(!values[field.id+'Min']?.trim()||!values[field.id+'Max']?.trim()):!values[field.id]?.trim();
+ const id=`mi-field-${field.id}`;
+ const props={min:field.min,max:field.max,step:field.integer?1:'any',maxLength:1000};
+ const title=<span className="mi2-field-label">{field.label}{missing&&<small>待确认</small>}</span>;
+ if(field.kind==='range')return <fieldset className={`mi2-field ${field.wide?'mi2-wide':''}`}><legend>{title}</legend><div className="mi2-range"><input {...props} aria-label={`${field.label}最低值`} type="number" placeholder="最低 · 待确认" value={values[field.id+'Min']??''} onChange={e=>onChange(field.id+'Min',e.target.value)}/><span>—</span><input {...props} aria-label={`${field.label}最高值`} type="number" placeholder="最高 · 待确认" value={values[field.id+'Max']??''} onChange={e=>onChange(field.id+'Max',e.target.value)}/></div></fieldset>;
+ return <label className={`mi2-field ${field.wide?'mi2-wide':''}`} htmlFor={id}>{title}{field.options?<span className="mi2-select"><select id={id} value={values[field.id]??''} onChange={e=>onChange(field.id,e.target.value)}><option value="">待确认</option>{field.options.map(v=><option key={v} value={v}>{v}</option>)}</select><ChevronDown size={14}/></span>:field.kind==='textarea'?<textarea id={id} maxLength={1000} placeholder={field.placeholder??'待确认'} value={values[field.id]??''} onChange={e=>onChange(field.id,e.target.value)}/>:<input {...props} id={id} type={field.kind==='number'?'number':'text'} placeholder={field.placeholder??'待确认'} value={values[field.id]??''} onChange={e=>onChange(field.id,e.target.value)}/>}</label>;
 }
-const dates = (value: string) => new Date(value).toLocaleString('zh-CN');
-const tabs = ['市场发现', '竞争分析', '细分市场', '机会评估'] as const;
-function BriefFields({ value, onChange, disabled = false }: { value: Brief; onChange: (v: Brief) => void; disabled?: boolean }) {
-  const set = (key: keyof Brief, val: string | number | null) => onChange({ ...value, [key]: val });
-  return <div className="mi-fields">
-    <label>初始资金 · 人民币<input disabled={disabled} type="number" min="1" max="100000000" step="0.01" placeholder="例如 100000" value={value.budgetCny ?? ''} onChange={e => set('budgetCny', e.target.value ? Number(e.target.value) : null)} /></label>
-    <label>候选数量<input disabled={disabled} type="number" min="1" max="20" step="1" placeholder="例如 5" value={value.targetCount ?? ''} onChange={e => set('targetCount', e.target.value ? Number(e.target.value) : null)} /></label>
-    <label>目标站点<select disabled={disabled} value={value.marketplace} onChange={e => set('marketplace', e.target.value)}><option value="">待确认</option>{marketplaces.map(m => <option key={m}>{m}</option>)}</select></label>
-    <label>履约方式<select disabled={disabled} value={value.fulfillment} onChange={e => set('fulfillment', e.target.value)}><option value="">待确认</option><option value="FBA">FBA · 平台仓储配送</option><option value="FBM">FBM · 自行安排配送</option></select></label>
-    <label>资金使用方式<select disabled={disabled} value={value.allocation} onChange={e => set('allocation', e.target.value)}><option value="">待确认</option><option value="alternatives">多个备选方向，之后择一</option><option value="portfolio">总预算内同时进入多个方向</option></select></label>
-    <label>预算口径<select disabled={disabled} value={value.budgetScope} onChange={e => set('budgetScope', e.target.value)}><option value="">待确认</option><option value="all_in">包含采购、物流、广告和周转</option><option value="inventory_only">仅采购预算，其他资金待核实</option></select></label>
-    <label>排除条件 · 选填<input disabled={disabled} maxLength={1000} placeholder="例如不做带电、大件产品" value={value.exclusions} onChange={e => set('exclusions', e.target.value)} /></label>
-    <label>供应链能力 · 选填<input disabled={disabled} maxLength={1000} placeholder="例如暂无货源，希望采购现货" value={value.supplyChain} onChange={e => set('supplyChain', e.target.value)} /></label>
-  </div>;
-}
+function Status({status}:{status:DemoStatus}) {return <span className={`mi2-status mi2-${status}`}>{statusLabels[status]}<small>演示</small></span>;}
+function TaskActions({record,onChange}:{record:DemoRecord;onChange:(id:string,status:DemoStatus)=>void}) {return <div className="mi2-task-actions">{record.status==='queued'&&<button type="button" onClick={()=>onChange(record.id,'running')}><Play size={13}/>开始演示</button>}{record.status==='running'&&<><button type="button" onClick={()=>onChange(record.id,'paused')}><Pause size={13}/>暂停演示</button><button type="button" onClick={()=>onChange(record.id,'completed')}><Check size={13}/>演示完成</button></>}{record.status==='paused'&&<button type="button" onClick={()=>onChange(record.id,'running')}><Play size={13}/>恢复演示</button>}{!['completed','cancelled'].includes(record.status)&&<button type="button" onClick={()=>onChange(record.id,'cancelled')}>取消演示</button>}</div>;}
+
 export function MarketIntelligence() {
-  const [health, setHealth] = useState<Health | null>(null);
-  const [authenticated, setAuthenticated] = useState(false);
-  const [accessKey, setAccessKey] = useState('');
-  const [error, setError] = useState('');
-  const [notice, setNotice] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [prompt, setPrompt] = useState('');
-  const [brief, setBrief] = useState<Brief>({ ...emptyBrief });
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [selected, setSelected] = useState<TaskDetail | null>(null);
-  const [editBrief, setEditBrief] = useState<Brief>({ ...emptyBrief });
-  const [tab, setTab] = useState(0);
-  const submission = useRef<{ body: string; key: string } | null>(null);
-  const selectionEpoch = useRef(0);
-  const refreshTasks = useCallback(async () => {
-    const result = await api<{ tasks: Task[] }>('/api/research/tasks'); setTasks(result.tasks);
-  }, []);
-  useEffect(() => {
-    let active = true;
-    (async () => {
-      try {
-        const h = await api<Health>('/api/health'); if (!active) return; setHealth(h);
-        if (h.accessConfigured) {
-          try { await api('/api/session'); if (active) setAuthenticated(true); if (h.storage && active) await refreshTasks(); }
-          catch (e) { if (active && !String(e).includes('解锁')) setError((e as Error).message); }
-        }
-      } catch (e) { if (active) setError((e as Error).message); }
-      finally { if (active) setLoading(false); }
-    })(); return () => { active = false; };
-  }, [refreshTasks]);
-  async function action(fn: () => Promise<void>) { setBusy(true); setError(''); setNotice(''); try { await fn(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); } }
-  async function selectTask(id: string) {
-    const epoch = ++selectionEpoch.current;
-    const result = await api<TaskDetail>(`/api/research/tasks/${id}`);
-    if (epoch === selectionEpoch.current) { setSelected(result); setEditBrief(result.task.brief); }
-  }
-  function fillExample() {
-    const p = '我现在有10万人民币初始资金，请帮我筛选5个可以进场的小类目节点。';
-    setPrompt(p); setBrief({ ...emptyBrief, ...suggestBrief(p) });
-    setNotice('已填入示例需求。请确认站点、预算口径和资金使用方式。');
-  }
-  async function createTask() {
-    const body = JSON.stringify({ prompt, brief });
-    if (submission.current?.body !== body) submission.current = { body, key: crypto.randomUUID() };
-    const result = await api<{ task: Task }>('/api/research/tasks', { method: 'POST', headers: { 'Idempotency-Key': submission.current.key }, body });
-    await refreshTasks(); await selectTask(result.task.id); setTab(0);
-    setNotice('任务已保存，可在研究记录中继续补充条件。尚未执行市场研究。');
-  }
-  const missing = missingConditions(brief);
-  return <main className="page-shell mi-shell">
-    <div className="eyebrow">APPLICATION / 01</div>
-    <div className="page-heading"><div><div className="app-heading-icon"><TrendingUp size={23} /></div><h1>市场情报中心</h1><p>从一个经营目标出发，建立有证据的市场研究。</p></div><span className="availability">{loading ? '检查连接中' : health?.storage ? '研究任务可保存' : '后台待配置'}</span></div>
-    <div className="mi-connections" aria-label="服务连接状态">{[['任务后台', health?.backend], ['研究数据库', health?.storage], ['模型执行', health?.model], ['市场数据', health?.marketData]].map(([label, ready]) => <span key={String(label)} className={ready ? 'is-ready' : ''}>{ready ? <CheckCircle2 size={14} /> : <Circle size={14} />}{label} · {ready ? '已连接' : '待接入'}</span>)}</div>
-    {error && <div className="mi-alert" role="alert">{error}</div>}
-    {notice && <div className="mi-notice" role="status">{notice}</div>}
-    {!loading && health && !health.accessConfigured && <div className="mi-notice">后台尚未配置工作区访问密钥，当前无法保存研究任务。请按仓库部署说明完成配置。</div>}
-    {health?.accessConfigured && !authenticated && <form className="mi-unlock mi-panel" onSubmit={e => { e.preventDefault(); void action(async () => { await api('/api/session', { method: 'POST', body: JSON.stringify({ key: accessKey }) }); setAccessKey(''); setAuthenticated(true); if (health.storage) await refreshTasks(); }); }}><LockKeyhole size={18} /><label htmlFor="workspace-key">解锁个人工作区</label><input id="workspace-key" type="password" autoComplete="current-password" placeholder="输入部署时设置的访问密钥" value={accessKey} onChange={e => setAccessKey(e.target.value)} required /><button disabled={busy} className="mi-button" type="submit">解锁</button></form>}
-    <nav className="mi-tabs" aria-label="市场研究模块">{tabs.map((name, i) => <button type="button" key={name} aria-current={tab === i ? 'page' : undefined} onClick={() => setTab(i)}>{name}</button>)}</nav>
-    <div className="mi-layout">
-      <section className="mi-main">
-        {tab === 0 ? <>
-          <form className="mi-panel" onSubmit={e => { e.preventDefault(); void action(createTask); }}>
-            <div className="mi-panel-heading"><div><span className="mi-kicker">NEW RESEARCH</span><h2>你想寻找什么市场？</h2></div><Search size={20} /></div>
-            <label className="mi-prompt-label" htmlFor="research-prompt">研究需求</label>
-            <textarea id="research-prompt" minLength={5} maxLength={4000} required value={prompt} onChange={e => setPrompt(e.target.value)} placeholder="例如：我有 10 万元初始资金，帮我筛选 5 个值得进一步验证的小类目节点。" />
-            <div className="mi-inline-actions"><button type="button" className="mi-text-button" onClick={fillExample}>使用 10 万元示例</button><button type="button" className="mi-text-button" disabled={!prompt.trim()} onClick={() => { setBrief(b => ({ ...b, ...suggestBrief(prompt) })); setNotice('已尝试提取明确的数字预算和候选数量，请核对。复杂条件需手动填写。'); }}>从需求提取预算与数量</button></div>
-            <h3>确认研究条件</h3><p className="mi-muted">结构化条件是执行依据。未填的条件将保存为待确认，不会由系统擅自假定。</p>
-            <BriefFields value={brief} onChange={setBrief} disabled={busy} />
-            <div className="mi-form-footer"><span>{missing.length ? `还有 ${missing.length} 项条件待确认，可先保存` : '条件已齐全，可保存研究任务'}</span><button className="mi-button mi-primary" type="submit" disabled={busy || !authenticated || !health?.storage}>{busy ? '处理中…' : '保存研究任务'}<ArrowRight size={16} /></button></div>
-          </form>
-          <section className="mi-panel"><div className="mi-panel-heading"><h2>研究方法</h2><span className="mi-muted">6 个阶段 · 尚未执行</span></div><ol className="mi-plan">{skills.map((s, i) => <li key={s.id}><span>{String(i + 1).padStart(2, '0')}</span><div><h3>{s.name}</h3><p>{s.output}</p></div></li>)}</ol></section>
-        </> : <section className="mi-panel mi-empty"><Search size={28} /><h2>{tabs[tab]}</h2><p>{selected ? '当前研究任务尚未执行，暂无可验证的市场数据。' : '先在市场发现中创建或选择一项研究任务。'}</p><p>{tab === 1 ? '这里将展示品牌集中度、价格分布、评论门槛与代表商品的证据。' : tab === 2 ? '这里将分别展示官方类目节点、完整路径和节点内的细分需求。' : '这里将展示候选对比、资金适配、推荐理由及待验证问题。'}</p><button type="button" className="mi-button" onClick={() => setTab(0)}>返回市场发现</button></section>}
-        {selected && <section className="mi-panel" aria-label="当前研究任务">
-          <div className="mi-panel-heading"><h2>研究条件与记录</h2><span className="mi-badge">{statusLabels[selected.task.status]}</span></div>
-          <p className="mi-task-prompt">{selected.task.prompt}</p><p className="mi-muted">创建于 {dates(selected.task.createdAt)} · 版本 {selected.task.version}</p>
-          {selected.task.status !== 'cancelled' && <div className="mi-notice">{selected.missing.length ? `待确认：${selected.missing.join('、')}。` : '条件已齐全。'} {selected.blockers.join('；')}。当前未开始研究，候选结果为 0。</div>}
-          <form onSubmit={e => { e.preventDefault(); void action(async () => { await api(`/api/research/tasks/${selected.task.id}`, { method: 'PATCH', body: JSON.stringify({ brief: editBrief, version: selected.task.version }) }); await refreshTasks(); await selectTask(selected.task.id); setNotice('研究条件已保存。'); }); }}>
-            <BriefFields value={editBrief} onChange={setEditBrief} disabled={busy || selected.task.status === 'cancelled'} />
-            <div className="mi-inline-actions"><button type="submit" className="mi-button" disabled={busy || selected.task.status === 'cancelled'}>保存条件</button><button type="button" className="mi-text-button" disabled={busy || selected.task.status === 'cancelled'} onClick={() => void action(async () => { await api(`/api/research/tasks/${selected.task.id}/cancel`, { method: 'POST', body: JSON.stringify({ version: selected.task.version }) }); await refreshTasks(); await selectTask(selected.task.id); })}>取消研究任务</button></div>
-          </form>
-          <h3>操作记录</h3><ol className="mi-events">{selected.events.map(event => <li key={event.id}><time>{dates(event.createdAt)}</time><span>{event.kind === 'clarified' ? '已更新研究条件，完整记录保存在后台。' : event.message}</span></li>)}</ol>
-          <p className="mi-muted">任务 ID：{selected.task.id}</p>
-        </section>}
-      </section>
-      <aside className="mi-panel mi-history"><div className="mi-panel-heading"><h2>研究记录</h2><button type="button" title="刷新研究记录" aria-label="刷新研究记录" className="mi-icon-button" disabled={busy || !authenticated || !health?.storage} onClick={() => void action(async () => { await refreshTasks(); if (selected) await selectTask(selected.task.id); })}><RefreshCw size={16} /></button></div><p className="mi-muted">最近 100 项 · 保存在工作区数据库</p>
-        {!tasks.length ? <p className="mi-history-empty">{authenticated && health?.storage ? '还没有研究任务。从左侧的经营目标开始。' : '连接并解锁后台后，可查看研究记录。'}</p> : <ul>{tasks.map(task => <li key={task.id}><button type="button" disabled={busy} aria-pressed={selected?.task.id === task.id} onClick={() => void action(() => selectTask(task.id))}><strong>{task.prompt}</strong><span>{statusLabels[task.status]}</span><small>{dates(task.createdAt)}</small></button></li>)}</ul>}
-        {authenticated && <button type="button" className="mi-text-button" disabled={busy} onClick={() => void action(async () => { await api('/api/session', { method: 'DELETE' }); setAuthenticated(false); setTasks([]); setSelected(null); })}>锁定工作区</button>}
-      </aside>
-    </div>
-  </main>;
+ const [module,setModule]=useState<ModuleId>('discovery');
+ const [view,setView]=useState<View>('research');
+ const [drafts,setDrafts]=useState(newDrafts);
+ const [records,setRecords]=useState<DemoRecord[]>(seedRecords);
+ const [hydrated,setHydrated]=useState(false);
+ const [notice,setNotice]=useState('');
+ const [error,setError]=useState('');
+ const [filter,setFilter]=useState<Filter>('all');
+ const [query,setQuery]=useState('');
+ const [selectedId,setSelectedId]=useState<string|null>(null);
+ const [advancedOpen,setAdvancedOpen]=useState(true);
+ const [reportId,setReportId]=useState<string|null>(null);
+ const dialog=useRef<HTMLDialogElement>(null);
+ const promptRef=useRef<HTMLTextAreaElement>(null);
+ const current=moduleById(module),draft=drafts[module];
+ const selected=records.find(r=>r.id===selectedId)??null;
+ const report=records.find(r=>r.id===reportId&&r.status==='completed')??null;
+ const pending=pendingFields(module,draft.values,draft.advanced);
+ const visible=records.filter(r=>filterMatch(r,filter)&&(!query.trim()||`${r.title} ${r.prompt} ${r.id} ${moduleById(r.module).name}`.toLowerCase().includes(query.trim().toLowerCase())));
+ const reports=records.filter(r=>r.status==='completed');
+ const isDialogOpen=selected!==null;
+ useEffect(()=>{try{const raw=localStorage.getItem(STORE_KEY);if(raw)setRecords(parseRecords(raw));}catch{setNotice('本地演示记录无法读取，已载入预置示例。');}setHydrated(true);},[]);
+ useEffect(()=>{if(!hydrated)return;try{localStorage.setItem(STORE_KEY,JSON.stringify(records));}catch{setNotice('浏览器未允许保存演示记录；当前交互仍可使用，刷新后可能丢失。');}},[records,hydrated]);
+ useEffect(()=>{if(isDialogOpen&&!dialog.current?.open)dialog.current?.showModal();else if(!isDialogOpen&&dialog.current?.open)dialog.current?.close();},[isDialogOpen]);
+ function updateDraft(patch:Partial<Draft>){setDrafts(prev=>({...prev,[module]:{...prev[module],...patch}}));setError('');}
+ function updateValue(key:string,value:string){setDrafts(prev=>({...prev,[module]:{...prev[module],values:{...prev[module].values,[key]:value}}}));setError('');}
+ function updateStatus(id:string,status:DemoStatus){setRecords(prev=>prev.map(r=>r.id===id?transitionRecord(r,status,new Date().toISOString()):r));setNotice(`${statusLabels[status]}（演示）：仅更新本地界面状态，不会运行、暂停或恢复真实 Agent。`);}
+ function startNew(){setView('research');setDrafts(prev=>({...prev,[module]:emptyDraft()}));setError('');setNotice('已打开空白研究表单，未填写的筛选条件均为待确认。');requestAnimationFrame(()=>promptRef.current?.focus());}
+ function applyTemplate(){
+  const prompts:Record<ModuleId,string>={discovery:'我现在有 10 万人民币初始资金，请帮我筛选 5 个可进一步验证的小类目方向。',competition:'请围绕我指定的竞品对象，对比价格、评论门槛与差异化机会，先确认样本范围。',segments:'请围绕我填写的父类目，从用户人群、使用场景与产品属性划分细分需求。',opportunity:'请评估我提供的候选方向，结合预算、目标利润与风险约束，整理进入前的验证清单。'};
+  updateDraft({prompt:prompts[module],values:module==='discovery'?{budget:'100000',count:'5'}:{},advanced:[]});setNotice('已应用示例输入模板；未提供的条件仍为待确认，模板不包含市场数据。');
+ }
+ function create(){const validation=validateDraft(module,draft);if(validation){setError(validation);return;}if(records.length>=100){setError('本地演示最多保存 100 项记录。');return;}const record=createDemoRecord(module,draft,`demo-${crypto.randomUUID()}`,new Date().toISOString());setRecords(prev=>[record,...prev]);setFilter('all');setQuery('');setNotice('演示任务已保存至此浏览器。未发送至后端，也未启动市场研究或 Agent。');setError('');setSelectedId(record.id);}
+ function refresh(){try{const raw=localStorage.getItem(STORE_KEY);if(raw)setRecords(parseRecords(raw));setNotice('已重新读取此浏览器中的演示记录，没有请求后端。');}catch{setError('本地演示记录无法读取，当前页面中的记录已保留。');}}
+ function loadConditions(record:DemoRecord){setModule(record.module);setDrafts(prev=>({...prev,[record.module]:{prompt:record.prompt,values:{...record.values},advanced:[...record.advanced]}}));setSelectedId(null);setView('research');setNotice('已复制条件到新研究草稿，原任务历史保留。');}
+ function download(record:DemoRecord){const url=URL.createObjectURL(new Blob([reportMarkdown(record)],{type:'text/markdown;charset=utf-8'}));const a=document.createElement('a');a.href=url;a.download=`${record.id}-demo-report.md`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+ return <main className="page-shell mi2-shell">
+  <header className="mi2-heading"><div><h1>市场情报中心</h1><p>Market Intelligence Center</p></div><div className="mi2-heading-actions"><button type="button" className={`mi2-button ${view==='tasks'?'mi2-active-button':''}`} aria-pressed={view==='tasks'} onClick={()=>{setView('tasks');setFilter('all');setQuery('');}}><ClipboardList size={17}/>任务管理</button><button type="button" className={`mi2-button ${view==='reports'?'mi2-active-button':''}`} aria-pressed={view==='reports'} onClick={()=>setView('reports')}><FileText size={17}/>报告中心</button><button type="button" className="mi2-button mi2-primary" onClick={startNew}><Plus size={19}/>新建研究</button></div></header>
+  <div className="mi2-demo-banner"><span><FlaskConical size={14}/><strong>前端演示</strong></span><p>所有记录与进度均为演示，仅保存在当前浏览器；未连接后端、Agent 或亚马逊数据。</p></div>
+  {notice&&<div className="mi2-feedback" role="status"><Check size={15}/><span>{notice}</span><button aria-label="关闭提示" type="button" onClick={()=>setNotice('')}><X size={15}/></button></div>}
+  <nav className="mi2-modules" aria-label="市场研究模块">{modules.map((m,i)=>{const Icon=moduleIcons[i];return <button key={m.id} type="button" aria-current={view==='research'&&module===m.id?'page':undefined} onClick={()=>{setModule(m.id);setView('research');setError('');}}><Icon size={19}/>{m.name}</button>;})}</nav>
+  {view==='research'&&<div className="mi2-layout">
+   <section className="mi2-panel mi2-research"><form onSubmit={e=>{e.preventDefault();create();}}>
+    <div className="mi2-panel-title"><div><h2>新建研究任务 <span>{current.name}</span></h2><p>{current.description}</p></div><details className="mi2-template-menu"><summary className="mi2-button mi2-template">使用模板<ChevronDown size={14}/></summary><div><button type="button" onClick={e=>{applyTemplate();e.currentTarget.closest('details')?.removeAttribute('open');}}>使用{current.name}示例</button><button type="button" onClick={e=>{updateDraft(emptyDraft());e.currentTarget.closest('details')?.removeAttribute('open');}}>使用空白模板</button></div></details></div>
+    <div className="mi2-prompt"><label htmlFor="mi2-prompt">研究需求 <em>*</em></label><textarea ref={promptRef} id="mi2-prompt" placeholder="你想寻找什么市场？例如：我有 10 万元初始资金，帮我筛选 5 个适合进一步验证的亚马逊小类目。" required minLength={5} maxLength={500} value={draft.prompt} onChange={e=>updateDraft({prompt:e.target.value})}/><span className="mi2-counter">{draft.prompt.length} / 500</span></div>
+    <h3 className="mi2-section-title">研究条件筛选 <small>空白条件均为待确认，不自动推断</small></h3>
+    <div className="mi2-fields">{current.fields.map(field=><FieldControl key={field.id} field={field} values={draft.values} onChange={updateValue}/>)}</div>
+    <section className="mi2-advanced"><button className="mi2-expand" type="button" aria-expanded={advancedOpen} aria-controls="mi2-more" onClick={()=>setAdvancedOpen(!advancedOpen)}><ChevronDown size={17} className={advancedOpen?'':'mi2-rotate'}/>更多筛选条件{draft.advanced.length>0&&<span>{draft.advanced.length}</span>}</button>
+     {advancedOpen&&<div id="mi2-more"><div className="mi2-chips">{advancedFields.map(f=><button key={f.id} type="button" aria-pressed={draft.advanced.includes(f.id)} onClick={()=>updateDraft({advanced:draft.advanced.includes(f.id)?draft.advanced.filter(id=>id!==f.id):[...draft.advanced,f.id]})}>{f.label.replace('（%）','')}{draft.advanced.includes(f.id)?<Check size={15}/>:<Plus size={15}/>}</button>)}</div>{draft.advanced.length>0&&<div className="mi2-fields mi2-extra-fields">{advancedFields.filter(f=>draft.advanced.includes(f.id)).map(field=><FieldControl key={field.id} field={field} values={draft.values} onChange={updateValue}/>)}</div>}</div>}
+    </section>
+    {error&&<div className="mi2-error" role="alert">{error}</div>}
+    <footer className="mi2-form-footer"><div><button type="button" className="mi2-text-button" onClick={()=>{updateDraft(emptyDraft());setNotice('当前模块的研究需求和筛选条件已重置；已保存记录不受影响。');}}><RotateCcw size={14}/>重置条件</button><span>{pending.length>0?`${pending.length} 项条件待确认，可先保存`:'筛选条件已填写'}</span></div><button type="submit" disabled={!hydrated} className="mi2-button mi2-primary">保存并创建演示任务<ArrowRight size={17}/></button></footer>
+   </form></section>
+   <aside className="mi2-panel mi2-history" aria-label="研究记录"><div className="mi2-history-heading"><h2>研究记录</h2><button type="button" aria-label="刷新演示研究记录" className="mi2-icon-button" disabled={!hydrated} onClick={refresh}><RefreshCw size={16}/></button></div><p className="mi2-history-note">本地演示 · 与任务管理共用记录</p>
+    <div className="mi2-history-filters" aria-label="研究记录状态筛选">{(['all','running','paused','completed'] as const).map(status=><button key={status} type="button" aria-pressed={filter===status} onClick={()=>setFilter(status)}>{status==='all'?'全部':status==='running'?'执行中':statusLabels[status]}{status!=='all'&&<small>({records.filter(r=>filterMatch(r,status)).length})</small>}</button>)}</div>
+    <div className="mi2-records">{!hydrated?<p className="mi2-empty">正在读取本地演示记录…</p>:records.filter(r=>filterMatch(r,filter)).length?records.filter(r=>filterMatch(r,filter)).slice(0,4).map(record=><article className="mi2-record" key={record.id}><button type="button" className="mi2-record-open" onClick={()=>setSelectedId(record.id)}><span className="mi2-record-title">{record.title}</span><Status status={record.status}/></button><div className="mi2-record-meta"><span>{record.status==='completed'?'报告结构示例已归档':record.status==='paused'?'仅演示暂停，可切换界面状态':record.status==='queued'?'已保存，尚未开始演示':record.status==='cancelled'?'演示记录已保留':`演示阶段 ${record.step}/5 · ${record.step*20}%`}</span><button type="button" aria-label={`查看 ${record.title} 的详情`} className="mi2-icon-button" onClick={()=>setSelectedId(record.id)}><MoreHorizontal size={17}/></button></div>{record.status==='running'&&<div className="mi2-progress" aria-label={`演示进度 ${record.step*20}%`}><span style={{width:`${record.step*20}%`}}/></div>}<time dateTime={record.createdAt}>{date(record.createdAt)}</time></article>):<p className="mi2-empty">暂无该状态的演示记录。</p>}</div>
+    <button className="mi2-text-button mi2-all-records" type="button" onClick={()=>{setView('tasks');setQuery('');}}>查看全部记录<ArrowRight size={15}/></button>
+   </aside>
+  </div>}
+  {view==='tasks'&&<section className="mi2-panel mi2-task-center"><div className="mi2-panel-title"><div><h2>任务管理 <span>{records.length} 项演示任务</span></h2><p>与右侧研究记录使用同一份本地数据。暂停 / 恢复只切换界面状态，不控制真实 Agent。</p></div><button className="mi2-button" type="button" onClick={()=>setView('research')}>返回研究表单<ArrowRight size={15}/></button></div><div className="mi2-task-filters"><label><Search size={16}/><input aria-label="搜索演示任务" value={query} onChange={e=>setQuery(e.target.value)} placeholder="搜索需求、模块或任务 ID"/></label><select aria-label="任务管理状态筛选" value={filter} onChange={e=>setFilter(e.target.value as Filter)}><option value="all">全部状态</option>{Object.entries(statusLabels).map(([status,label])=><option key={status} value={status}>{label}（演示）</option>)}</select><span>{visible.length} 项</span></div><div className="mi2-task-list">{visible.map(record=><article key={record.id} className="mi2-task-row"><div><span className="mi2-task-module">{moduleById(record.module).name} / 演示</span><button className="mi2-row-title" type="button" onClick={()=>setSelectedId(record.id)}>{record.title}</button><p>{record.id} · {date(record.createdAt)}</p></div><Status status={record.status}/><TaskActions record={record} onChange={updateStatus}/><button className="mi2-text-button" type="button" onClick={()=>setSelectedId(record.id)}>任务历史<ArrowRight size={14}/></button></article>)}{!visible.length&&<p className="mi2-empty">没有符合条件的演示任务，试试其他筛选条件。</p>}</div></section>}
+  {view==='reports'&&<section className="mi2-panel mi2-report-center"><div className="mi2-panel-title"><div><h2>报告中心 <span>演示报告结构</span></h2><p>仅汇总演示任务的需求、条件和待验证事项。不含真实亚马逊数据或投资结论。</p></div><FileText size={22}/></div><div className="mi2-report-layout"><div className="mi2-report-list">{reports.map(record=><button type="button" key={record.id} aria-pressed={report?.id===record.id} onClick={()=>setReportId(record.id)}><FileText size={22}/><span><strong>{record.title}</strong><small>{moduleById(record.module).name} · 报告结构示例</small><time>{date(record.updatedAt)}</time></span><ArrowRight size={15}/></button>)}{!reports.length&&<p className="mi2-empty">暂无报告结构示例。可在任务管理中手动将演示任务切换为完成状态。</p>}</div><div className="mi2-report-preview">{report?<><div className="mi2-report-heading"><h3>报告预览 <span>仅演示</span></h3><button className="mi2-button" type="button" onClick={()=>download(report)}><ArrowDownToLine size={15}/>导出结构示例</button></div><div className="mi2-report-warning">未进行市场研究，未生成推荐结论。以下仅展示你填写的条件及报告结构。</div><h4>研究需求</h4><p>{report.prompt}</p><h4>筛选条件摘要</h4><dl className="mi2-condition-summary">{activeFields(report.module,report.advanced).map(f=><div key={f.id}><dt>{f.label}</dt><dd>{fieldValue(f,report.values)}</dd></div>)}</dl><h4>后续待验证</h4><ul><li>数据来源与采集时间：待接入</li><li>需求与竞争证据：待研究</li><li>资金适配及风险判断：待研究</li><li>推荐结论：未生成</li></ul><button className="mi2-text-button" type="button" onClick={()=>setSelectedId(report.id)}>查看关联任务与历史<ArrowRight size={14}/></button></>:<div className="mi2-report-placeholder"><FileText size={35}/><h3>选择一份报告结构示例</h3><p>完成状态仅表示演示流程完成，研究结果仍需后续接入真实数据。</p></div>}</div></div></section>}
+  <dialog ref={dialog} className="mi2-dialog" aria-labelledby="mi2-detail-title" onClose={()=>setSelectedId(null)}><div className="mi2-dialog-inner">{selected&&<><header><div><span className="mi2-task-module">{moduleById(selected.module).name} · 本地演示</span><h2 id="mi2-detail-title">研究任务详情</h2></div><button type="button" className="mi2-icon-button" aria-label="关闭研究任务详情" onClick={()=>setSelectedId(null)}><X size={21}/></button></header><div className="mi2-detail-intro"><Status status={selected.status}/><p>{selected.prompt}</p><small>任务 ID：{selected.id}</small></div><div className="mi2-report-warning">所有进度和操作均为前端演示，未运行 Agent；未提供的条件仍为待确认。</div><TaskActions record={selected} onChange={updateStatus}/><h3>研究条件</h3><dl className="mi2-condition-summary">{activeFields(selected.module,selected.advanced).map(f=><div key={f.id}><dt>{f.label}</dt><dd>{fieldValue(f,selected.values)}</dd></div>)}</dl><h3>任务历史</h3><ol className="mi2-timeline">{selected.events.map(event=><li key={event.id}><time>{date(event.at)}</time><p>{event.text}</p></li>)}</ol><footer><button type="button" className="mi2-button" onClick={()=>loadConditions(selected)}>复制条件到新研究</button>{selected.status==='completed'&&<button type="button" className="mi2-button mi2-primary" onClick={()=>{setReportId(selected.id);setSelectedId(null);setView('reports');}}>查看报告结构<ArrowRight size={15}/></button>}</footer></>}</div></dialog>
+ </main>;
 }

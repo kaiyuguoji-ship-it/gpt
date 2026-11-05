@@ -29,5 +29,6 @@
     "typescript": "^5.9.3",
     "wrangler": "4.157.0"
   },
-  "type": "module"
+  "type": "module",
+  "packageManager": "npm@11.19.1"
 }
