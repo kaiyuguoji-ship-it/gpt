@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
 import handler from '../server/index.ts';
+import { processNextJob } from '../server/admin.ts';
 import { emptyBrief, missingConditions, statusForBrief, suggestBrief, validateBrief } from '../lib/market.ts';
 import type { Database, Env, Statement } from '../server/types.ts';
 import { authenticated, sessionCookie } from '../server/auth.ts';
@@ -11,6 +12,7 @@ const complete = { ...emptyBrief, budgetCny: 100000, targetCount: 5, marketplace
 function setup() {
   const sqlite = new DatabaseSync(':memory:');
   sqlite.exec(readFileSync(new URL('../migrations/0001_market_research.sql', import.meta.url), 'utf8'));
+  sqlite.exec(readFileSync(new URL('../migrations/0002_admin.sql', import.meta.url), 'utf8'));
   const database: Database = {
     prepare(sql) {
       let args: unknown[] = [];
@@ -29,7 +31,7 @@ function setup() {
     return handler.fetch(new Request(`http://localhost${path}`, { method, headers: { 'Content-Type': 'application/json', Origin: 'http://localhost', Cookie: cookie, ...headers }, ...(data === undefined ? {} : { body: JSON.stringify(data) }) }), env);
   }
   async function login() { const r = await request('/api/session', 'POST', { key: env.WORKSPACE_ACCESS_KEY }); cookie = r.headers.get('Set-Cookie')!.split(';')[0]; return r; }
-  return { env, request, login, close: () => sqlite.close() };
+  return { env, request, login, sqlite, close: () => sqlite.close() };
 }
 
 test('extracts the actual user example without guessing country or allocation', () => {
@@ -102,4 +104,56 @@ test('health verifies migrated storage rather than just the binding', async () =
   assert.equal((await (await f.request('/api/health')).json() as { storage: boolean }).storage, true);
   f.env.DB = { prepare() { throw new Error('missing table'); }, batch: async () => [] };
   assert.equal((await (await f.request('/api/health')).json() as { storage: boolean }).storage, false); f.close();
+});
+
+
+test('admin data requires a session and supports persisted versioned settings', async () => {
+ const f=setup(); assert.equal((await f.request('/api/admin/overview')).status,401); await f.login();
+ const get=await (await f.request('/api/admin/overview')).json() as {settings:{version:number}};
+ const data={name:'测试工作区',acceptingTasks:false,queueEnabled:false,version:get.settings.version};
+ assert.equal((await f.request('/api/admin/settings','PATCH',data)).status,200);
+ assert.equal((await f.request('/api/admin/settings','PATCH',data)).status,409);
+ assert.equal((await f.request('/api/research/tasks','POST',{prompt:'测试暂停接收任务',brief:complete},{'Idempotency-Key':crypto.randomUUID()})).status,409);
+ assert.equal((await f.request('/api/admin/jobs','POST',{})).status,409);
+ const logs=await (await f.request('/api/admin/logs')).json() as {events:unknown[]};assert.equal(logs.events.length,1);f.close();
+});
+test('diagnostic jobs execute once and expose actual results, not research output',async()=>{
+ const f=setup();await f.login();
+ const created=await f.request('/api/admin/jobs','POST',{});assert.equal(created.status,201);
+ assert.equal((await f.request('/api/admin/jobs/process','POST',{})).status,200);
+ const list=await (await f.request('/api/admin/jobs')).json() as {jobs:{status:string;attempts:number;result_json:string}[]};
+ assert.equal(list.jobs[0].status,'succeeded');assert.equal(list.jobs[0].attempts,1);assert.equal(JSON.parse(list.jobs[0].result_json).researchTasks,0);
+ const second=await (await f.request('/api/admin/jobs/process','POST',{})).json() as {processed:boolean};assert.equal(second.processed,false);f.close();
+});
+test('queued cancellation prevents execution and queue size is bounded',async()=>{
+ const f=setup();await f.login();
+ const {id}=await (await f.request('/api/admin/jobs','POST',{})).json() as {id:string};
+ assert.equal((await f.request(`/api/admin/jobs/${id}/cancel`,'POST',{})).status,200);
+ assert.equal((await (await f.request('/api/admin/jobs/process','POST',{})).json() as {processed:boolean}).processed,false);
+ for(let i=0;i<10;i++)assert.equal((await f.request('/api/admin/jobs','POST',{})).status,201);
+ assert.equal((await f.request('/api/admin/jobs','POST',{})).status,429);f.close();
+});
+test('expired leases recover and capped jobs stop retrying',async()=>{
+ const f=setup();await f.login();
+ const {id}=await (await f.request('/api/admin/jobs','POST',{})).json() as {id:string};
+ f.sqlite.prepare("UPDATE background_jobs SET status='running',attempts=1,lease_until=1,lease_token='old' WHERE id=?").run(id);
+ await processNextJob(f.env.DB!);
+ assert.equal((f.sqlite.prepare('SELECT status FROM background_jobs WHERE id=?').get(id) as {status:string}).status,'succeeded');
+ f.sqlite.prepare("UPDATE background_jobs SET status='running',attempts=3,lease_until=1,lease_token='old' WHERE id=?").run(id);
+ await processNextJob(f.env.DB!);
+ assert.equal((f.sqlite.prepare('SELECT status FROM background_jobs WHERE id=?').get(id) as {status:string}).status,'failed');
+ assert.equal((await f.request(`/api/admin/jobs/${id}/retry`,'POST',{})).status,200);
+ f.close();
+});
+test('job errors are persisted with bounded retry and do not leak database details',async()=>{
+ const f=setup();await f.login();await f.request('/api/admin/jobs','POST',{});
+ f.sqlite.exec('DROP TABLE research_events');
+ await processNextJob(f.env.DB!);
+ const job=f.sqlite.prepare('SELECT * FROM background_jobs').get() as {status:string;attempts:number;last_error:string};
+ assert.equal(job.status,'queued');assert.equal(job.attempts,1);assert.doesNotMatch(job.last_error,/research_events|SELECT/);f.close();
+});
+test('admin query validation and pagination are bounded',async()=>{
+ const f=setup();await f.login();
+ for(const url of ['/api/admin/tasks?page=-1','/api/admin/tasks?status=running','/api/admin/logs?page=1.5'])assert.equal((await f.request(url)).status,400);
+ assert.equal((await (await f.request('/api/admin/tasks?q=%27')).json() as {total:number}).total,0);f.close();
 });

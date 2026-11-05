@@ -4,6 +4,8 @@ Next.js App Router + TypeScript + Tailwind CSS 4 + Lucide React.
 
 ## 当前版本
 
+后端管理入口：`/admin/`。提供服务状态、研究任务、持久化后台检查作业、操作日志和基础设置。先执行两份 D1 迁移，再通过 Worker 启动；静态预览不提供后台 API。
+
 - 九大独立业务应用入口。
 - Apple-inspired 留白与排版，半透明磨砂玻璃侧边导航。
 - 主工作区保持纯白，卡片和分割线使用轻量浅灰。

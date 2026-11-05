@@ -9,5 +9,10 @@
       "/api/*"
     ]
   },
-  "main": "server/index.ts"
+  "main": "server/index.ts",
+  "triggers": {
+    "crons": [
+      "* * * * *"
+    ]
+  }
 }

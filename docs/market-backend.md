@@ -81,3 +81,33 @@ npm run backend:dev
 `npm test` 覆盖实际用户示例、缺失条件、边界数据、签名会话、同源限制、数据库任务生命周期、审计、幂等和配置缺失。测试数据库为 Node SQLite；部署前还应通过 `db:local` 在 Wrangler D1 模拟器跑一次完整流程。
 
 参考：[Cloudflare 静态资源与 Worker 绑定](https://developers.cloudflare.com/workers/static-assets/binding/)、[D1 数据库接口](https://developers.cloudflare.com/d1/worker-api/d1-database/)。
+
+## 后端管理页面（0.2.0）
+
+入口：`/admin/`，侧栏底部有“后端管理”。使用同一工作区访问密钥登录。
+
+- 运行概览：真实任务统计、数据库读取状态、服务版本及接收/处理开关。
+- 研究任务：按需求或完整 ID 搜索、状态筛选、分页、详情及取消。
+- 后台作业：持久化数据库检查作业、状态和结果、取消、失败后手动重试。
+- 操作日志：研究任务变更、设置变更、后台作业结果，分页查看；不等同于云平台基础设施日志。
+- 基础设置：工作区名称、是否接收新研究任务、是否领取新的后台作业；带版本冲突保护。
+
+新增迁移 `0002_admin.sql`，升级前必须执行本地/远端迁移。工作区名称为管理配置，不自动修改品牌名称。开关立即影响后端接口；关闭队列不会强制终止已经领取的短作业。
+
+后台作业是 D1 持久化队列，由 Cloudflare Cron 每分钟处理最多一项；采用原子领取、60 秒租约、最多 3 次自动尝试、失败延迟重试及租约过期恢复。当前仅注册 `database_check`，不会执行 AI 研究。作业处理为短时数据库操作；未来长时间研究需另行实现可靠执行器，不能直接塞入这个短任务处理函数。
+
+Wrangler 本地开发不自动触发 Cron，管理页面“处理下一项”可用于本地验证。部署到 Cloudflare 后由 `triggers.crons` 触发；Cron 配置传播可能需要时间。页面不声称已经验证云端定时器。
+
+后台管理复用单工作区权限，拥有密钥者均可修改设置。当前没有多用户角色管理、在线密钥编辑或 Agent/MCP 配置。
+
+新接口（均要求会话，写入要求同源）：
+
+- `GET /api/admin/overview`
+- `PATCH /api/admin/settings`，字段 `name/acceptingTasks/queueEnabled/version`
+- `GET /api/admin/tasks?page=1&q=&status=`，每页20条
+- `GET /api/admin/logs?page=1`，每页30条
+- `GET/POST /api/admin/jobs`，查看最近50项/创建数据库检查
+- `POST /api/admin/jobs/process`，立即处理下一项
+- `POST /api/admin/jobs/:id/cancel`、`POST /api/admin/jobs/:id/retry`
+
+仅绑定数据库不代表已迁移，管理接口依赖两份迁移全部成功。不要把本地开发模拟器端口暴露到公网；生产使用 Worker 部署。

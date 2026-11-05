@@ -1,3 +1,5 @@
+import { readSettings, auditStatement, processNextJob } from './admin.ts';
+import type { Job } from './admin.ts';
 import { blockers, missingConditions, skills, statusForBrief, validateBrief } from '../lib/market.ts';
 import type { Brief, Task, TaskEvent, TaskStatus } from '../lib/market.ts';
 import type { Env } from './types.ts';
@@ -20,6 +22,9 @@ async function body(request: Request): Promise<Record<string, unknown>> {
 }
 const briefFrom = (v: unknown) => { try { return validateBrief(v); } catch (e) { throw new HttpError(400, (e as Error).message); } };
 export default {
+  async scheduled(_event: unknown, env: Env): Promise<void> {
+    if (env.DB) await processNextJob(env.DB);
+  },
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
     if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
@@ -43,6 +48,67 @@ export default {
       if (url.pathname === '/api/session' && request.method === 'GET') return json({ authenticated: true });
       if (!env.DB) throw new HttpError(503, '研究数据库尚未绑定，任务未保存');
       const db = env.DB;
+      if (url.pathname === '/api/admin/overview' && request.method === 'GET') {
+        const settings = await readSettings(db);
+        const stats = await db.prepare('SELECT status,COUNT(*) AS count FROM research_tasks GROUP BY status').all<{status:string;count:number}>();
+        const jobs = await db.prepare('SELECT status,COUNT(*) AS count FROM background_jobs GROUP BY status').all<{status:string;count:number}>();
+        return json({ settings, stats: stats.results, jobs: jobs.results, serverTime: new Date().toISOString(), version: '0.2.0', capabilities: { storage: true, sessions: true, backgroundJobs: true, researchRunner: false, agent: false, mcp: false } });
+      }
+      if (url.pathname === '/api/admin/settings' && request.method === 'PATCH') {
+        const input = await body(request);
+        if (typeof input.name !== 'string' || input.name.trim().length < 1 || input.name.length > 60 || typeof input.acceptingTasks !== 'boolean' || typeof input.queueEnabled !== 'boolean' || !Number.isInteger(input.version)) throw new HttpError(400,'设置格式不正确');
+        const results = await db.batch([
+          db.prepare('UPDATE workspace_settings SET name=?,accepting_tasks=?,queue_enabled=?,version=version+1,updated_at=? WHERE id=1 AND version=?').bind(input.name.trim(),Number(input.acceptingTasks),Number(input.queueEnabled),new Date().toISOString(),input.version),
+          auditStatement(db,'settings_updated',`更新工作区设置：接收任务=${input.acceptingTasks}，后台队列=${input.queueEnabled}`,true),
+        ]) as {meta:{changes:number}}[];
+        if (results[0].meta.changes !== 1) throw new HttpError(409,'设置已更新，请刷新后重试');
+        return json({settings:await readSettings(db)});
+      }
+      if (url.pathname === '/api/admin/tasks' && request.method === 'GET') {
+        const page = Number(url.searchParams.get('page') ?? 1);
+        const search = (url.searchParams.get('q') ?? '').trim();
+        const status = url.searchParams.get('status') ?? '';
+        if (!Number.isInteger(page) || page < 1 || page > 100000 || search.length > 200 || !['','needs_clarification','blocked_configuration','cancelled'].includes(status)) throw new HttpError(400,'筛选条件无效');
+        const where = "WHERE (?='' OR status=?) AND (?='' OR instr(prompt,?)>0 OR id=?)";
+        const args = [status,status,search,search,search];
+        const total = await db.prepare(`SELECT COUNT(*) AS count FROM research_tasks ${where}`).bind(...args).first<{count:number}>();
+        const rows = await db.prepare(`SELECT * FROM research_tasks ${where} ORDER BY created_at DESC,id DESC LIMIT 20 OFFSET ?`).bind(...args,(page-1)*20).all<Row>();
+        return json({ tasks: rows.results.map(mapTask), total: total?.count ?? 0, page, pageSize:20 });
+      }
+      if (url.pathname === '/api/admin/logs' && request.method === 'GET') {
+        const page = Number(url.searchParams.get('page') ?? 1);
+        if (!Number.isInteger(page) || page < 1 || page > 100000) throw new HttpError(400,'页码无效');
+        const union = "SELECT id,kind,message,created_at,task_id FROM research_events UNION ALL SELECT id,kind,message,created_at,NULL AS task_id FROM admin_events";
+        const rows = await db.prepare(`SELECT * FROM (${union}) ORDER BY created_at DESC,id DESC LIMIT 30 OFFSET ?`).bind((page-1)*30).all();
+        const total = await db.prepare(`SELECT COUNT(*) AS count FROM (${union})`).first<{count:number}>();
+        return json({events:rows.results,total:total?.count ?? 0,page,pageSize:30});
+      }
+      if (url.pathname === '/api/admin/jobs' && request.method === 'GET') {
+        return json({jobs:(await db.prepare('SELECT * FROM background_jobs ORDER BY created_at DESC,id DESC LIMIT 50').all<Job>()).results});
+      }
+      if (url.pathname === '/api/admin/jobs' && request.method === 'POST') {
+        if (!(await readSettings(db)).queue_enabled) throw new HttpError(409,'后台队列已暂停');
+        const id=crypto.randomUUID(), now=new Date().toISOString();
+        // Bound pending diagnostic jobs, even if concurrent submissions occur.
+        const results=await db.batch([
+          db.prepare("INSERT INTO background_jobs(id,kind,status,available_at,created_at,updated_at) SELECT ?,'database_check','queued',?,?,? WHERE (SELECT COUNT(*) FROM background_jobs WHERE status IN ('queued','running'))<10").bind(id,Date.now(),now,now),
+          auditStatement(db,'job_created',`创建后台数据库检查：${id}`,true),
+        ]) as {meta:{changes:number}}[];
+        if (!results[0].meta.changes) throw new HttpError(429,'待处理作业已达上限，请等待完成');
+        return json({id},201);
+      }
+      if (url.pathname === '/api/admin/jobs/process' && request.method === 'POST') return json(await processNextJob(db));
+      const jobAction=url.pathname.match(/^\/api\/admin\/jobs\/([a-f0-9-]{36})\/(cancel|retry)$/);
+      if (jobAction && request.method === 'POST') {
+        const [,id,action]=jobAction;
+        const sql=action==='cancel'
+          ? "UPDATE background_jobs SET status='cancelled',lease_token=NULL,lease_until=NULL,updated_at=? WHERE id=? AND status IN ('queued','running')"
+          : "UPDATE background_jobs SET status='queued',attempts=0,last_error=NULL,available_at=0,updated_at=? WHERE id=? AND status='failed'";
+        if (action==='retry' && !(await readSettings(db)).queue_enabled) throw new HttpError(409,'后台队列已暂停');
+        const results=await db.batch([db.prepare(sql).bind(new Date().toISOString(),id),auditStatement(db,`job_${action}`,`后台作业${action==='cancel'?'取消':'重试'}：${id}`,true)]) as {meta:{changes:number}}[];
+        if (!results[0].meta.changes) throw new HttpError(409,'作业不存在或状态已变化');
+        return json({success:true});
+      }
       if (url.pathname === '/api/research/tasks' && request.method === 'GET') {
         const rows = await db.prepare('SELECT * FROM research_tasks ORDER BY created_at DESC LIMIT 100').all<Row>();
         return json({ tasks: rows.results.map(mapTask) });
@@ -56,6 +122,7 @@ export default {
         const serialized = JSON.stringify({ prompt, brief });
         const existing = await db.prepare('SELECT * FROM research_tasks WHERE request_key = ?').bind(key).first<Row>();
         if (existing) { if (existing.request_body !== serialized) throw new HttpError(409, '任务请求标识已用于其他内容'); return json({ task: mapTask(existing) }); }
+        if (!(await readSettings(db)).accepting_tasks) throw new HttpError(409,'工作区已暂停接收新研究任务');
         const id = crypto.randomUUID(), now = new Date().toISOString(), status = statusForBrief(brief);
         await db.batch([
           db.prepare('INSERT OR IGNORE INTO research_tasks (id,request_key,request_body,prompt,brief_json,status,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)').bind(id,key,serialized,prompt,JSON.stringify(brief),status,now,now),

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { LayoutDashboard, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { LayoutDashboard, PanelLeftClose, PanelLeftOpen, Settings2 } from 'lucide-react';
 import { centers } from '@/lib/centers';
 
 export function SidebarNavigation() {
@@ -67,6 +67,7 @@ export function SidebarNavigation() {
           })}
         </nav>
       </div>
+      <Link href="/admin/" title="后端管理" className="rail-link" aria-current={pathname.startsWith('/admin') ? 'page' : undefined}><Settings2 size={17}/><span className="rail-name">后端管理</span></Link>
       <div className="rail-footer">
         <div className="rail-state"><i/><span>平台工作空间</span></div>
         <small>SWANYO OS · V1.0</small>
