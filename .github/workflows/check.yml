@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 jobs:
-  verify:
+  tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,9 +15,22 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - run: npm run typecheck
       - run: npm test
-      - run: npm run build
-      - run: npm run deploy:check
+  project:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [web, admin, api]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck -w @swanyo/${{ matrix.app }}
+      - run: npm run build -w @swanyo/${{ matrix.app }}
+      - run: npm run deploy:check -w @swanyo/${{ matrix.app }}
         env:
           WRANGLER_SEND_METRICS: 'false'

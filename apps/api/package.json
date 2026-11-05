@@ -1,0 +1,14 @@
+{
+  "name": "@swanyo/api",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev --config wrangler.local.jsonc --port 8790",
+    "typecheck": "tsc --noEmit",
+    "build": "wrangler deploy --dry-run",
+    "deploy": "wrangler deploy",
+    "deploy:check": "wrangler deploy --dry-run",
+    "db:local": "wrangler d1 migrations apply swanyo-market-local --local --config wrangler.local.jsonc"
+  },
+  "type": "module"
+}

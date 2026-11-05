@@ -1,9 +1,9 @@
 import { readSettings, auditStatement, processNextJob } from './admin.ts';
 import type { Job } from './admin.ts';
-import { blockers, missingConditions, skills, statusForBrief, validateBrief } from '../lib/market.ts';
-import type { Brief, Task, TaskEvent, TaskStatus } from '../lib/market.ts';
+import { blockers, missingConditions, skills, statusForBrief, validateBrief } from '../../../packages/shared/market.ts';
+import type { Brief, Task, TaskEvent, TaskStatus } from '../../../packages/shared/market.ts';
 import type { Env } from './types.ts';
-import { authenticated, clearCookie, sameSecret, sessionCookie } from './auth.ts';
+import { authenticated, clearAdminCookie, clearCookie, sameSecret, sessionCookie } from './auth.ts';
 
 type Row = { id: string; prompt: string; brief_json: string; status: TaskStatus; version: number; created_at: string; updated_at: string; request_body: string };
 const mapTask = (r: Row): Task => ({ id: r.id, prompt: r.prompt, brief: JSON.parse(r.brief_json) as Brief, status: r.status, version: r.version, createdAt: r.created_at, updatedAt: r.updated_at });
@@ -27,25 +27,28 @@ export default {
   },
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-    if (!url.pathname.startsWith('/api/')) return env.ASSETS.fetch(request);
+    if (!url.pathname.startsWith('/api/')) return json({ error: 'API service only' }, 404);
     try {
       if (request.method !== 'GET' && request.headers.get('Origin') !== url.origin) throw new HttpError(403, '请求来源不匹配');
-      const configured = Boolean(env.WORKSPACE_ACCESS_KEY && env.WORKSPACE_ACCESS_KEY.length >= 32);
-      if (url.pathname === '/api/health' && request.method === 'GET') {
+      const isAdmin = url.pathname.startsWith('/api/admin/');
+      const secret = isAdmin ? env.ADMIN_ACCESS_KEY : env.WORKSPACE_ACCESS_KEY;
+      const configured = Boolean(secret && secret.length >= 32);
+      const sessionPath = isAdmin ? '/api/admin/session' : '/api/session';
+      if ((url.pathname === '/api/health' || url.pathname === '/api/admin/health') && request.method === 'GET') {
         let storage = false;
         if (env.DB) { try { await env.DB.prepare('SELECT id FROM research_tasks LIMIT 1').all(); storage = true; } catch { /* Binding alone does not prove migrations succeeded. */ } }
         return json({ backend: true, storage, accessConfigured: configured, model: false, marketData: false, runner: false });
       }
-      if (!configured) throw new HttpError(503, '工作区访问密钥尚未配置，请先完成后台部署设置');
-      const secret = env.WORKSPACE_ACCESS_KEY!;
-      if (url.pathname === '/api/session' && request.method === 'POST') {
+      if (!configured || !secret) throw new HttpError(503, '工作区访问密钥尚未配置，请先完成后台部署设置');
+      if (url.pathname === sessionPath && request.method === 'POST') {
         const input = await body(request);
         if (typeof input.key !== 'string' || !(await sameSecret(input.key, secret))) throw new HttpError(401, '访问密钥不正确');
-        return json({ authenticated: true }, 200, { 'Set-Cookie': await sessionCookie(secret, url.protocol === 'https:') });
+        return json({ authenticated: true }, 200, { 'Set-Cookie': await sessionCookie(secret, url.protocol === 'https:', isAdmin) });
       }
-      if (url.pathname === '/api/session' && request.method === 'DELETE') return json({ authenticated: false }, 200, { 'Set-Cookie': clearCookie });
-      if (!(await authenticated(request, secret))) throw new HttpError(401, '请先解锁工作区');
-      if (url.pathname === '/api/session' && request.method === 'GET') return json({ authenticated: true });
+      if (url.pathname === sessionPath && request.method === 'DELETE') return json({ authenticated: false }, 200, { 'Set-Cookie': isAdmin ? clearAdminCookie : clearCookie });
+      const adminAuthenticated = Boolean(env.ADMIN_ACCESS_KEY && env.ADMIN_ACCESS_KEY.length >= 32 && await authenticated(request, env.ADMIN_ACCESS_KEY, true));
+      if (!(isAdmin ? adminAuthenticated : (adminAuthenticated || await authenticated(request, secret)))) throw new HttpError(401, '请先解锁工作区');
+      if (url.pathname === sessionPath && request.method === 'GET') return json({ authenticated: true });
       if (!env.DB) throw new HttpError(503, '研究数据库尚未绑定，任务未保存');
       const db = env.DB;
       if (url.pathname === '/api/admin/overview' && request.method === 'GET') {

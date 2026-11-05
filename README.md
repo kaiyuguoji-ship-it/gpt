@@ -1,48 +1,42 @@
 # SWANYO OS
 
-Next.js App Router + TypeScript + Tailwind CSS 4 + Lucide React.
+一个仓库，三个独立构建、独立部署的项目。当前提供业务工作区、研究需求存储、管理控制台及数据库诊断作业；Agent / Skill / MCP 尚未接入执行。
 
-## 当前版本
+| 项目 | 目录 | 职责 | 云端名称 |
+| --- | --- | --- | --- |
+| 业务前端 | `apps/web` | 九大业务中心、研究需求表单 | `swanyo-web` |
+| 管理后台 | `apps/admin` | 独立管理员登录、任务、作业、设置、日志 | `swanyo-admin` |
+| 后端服务 | `apps/api` | 鉴权、API、数据库、定时作业 | `swanyo-api` |
+| 共用代码 | `packages/shared` | 数据类型、校验规则、轻量转发 | 不单独部署 |
 
-后端管理入口：`/admin/`。提供服务状态、研究任务、持久化后台检查作业、操作日志和基础设置。先执行两份 D1 迁移，再通过 Worker 启动；静态预览不提供后台 API。
+前端各自输出静态页面，并用极小的 Worker 将同源 `/api/*` 请求转发到 API Service Binding。数据库、业务逻辑、密钥只存在 API 项目。业务前端不发布管理页面，并拒绝转发管理接口；后端也独立校验管理员会话。
 
-- 九大独立业务应用入口。
-- Apple-inspired 留白与排版，半透明磨砂玻璃侧边导航。
-- 主工作区保持纯白，卡片和分割线使用轻量浅灰。
-- 响应式导航与应用页面。
-- 市场情报、产品研发、商业决策、视觉创意、Listing SEO、广告运营、FBA 库存、供应链运营、数据审计九大应用。
-- 市场情报中心已增加真实任务管理后台：对话需求、条件确认、任务记录、取消及审计。数据库需按部署说明绑定 D1。
-- 模型、市场数据连接器和自动研究执行器尚未接入；页面如实显示阻塞状态，不展示虚构市场结果。
-- 其余八个业务中心保持原有导航原型。
+## 安装与验证
 
-完整配置与能力边界见 [市场情报后台说明](docs/market-backend.md)。
-
-## 本地运行
-
-需要 Node.js >= 22.18（含测试运行时）。
+使用 Node.js 24 和 npm 11。在仓库根目录执行：
 
 ```sh
 npm ci
-npm run dev
+npm run typecheck
+npm test
+npm run build
+npm run deploy:check
 ```
 
-浏览器访问 http://localhost:3000。静态生产构建：`npm run build`，输出到 `out/`。
+## 本地完整环境
 
-## Cloudflare 部署
+```sh
+cp apps/api/.dev.vars.example apps/api/.dev.vars
+# 编辑上面的文件，设置两条不同的随机密钥（各至少 32 字符）
+npm run db:local -w @swanyo/api
+npm run build
+npm run preview
+```
 
-完整后台使用仓库内 `wrangler.jsonc` 部署至 Workers。仅静态前端可沿用以下 Pages 设置；Pages 静态部署不会提供新增 API。
+业务网站 `http://127.0.0.1:8791/`；管理后台 `http://127.0.0.1:8792/`；API `http://127.0.0.1:8790/api/health`。使用各自密钥登录。关闭本地进程后，预览地址不再可用。本地诊断作业通过管理界面“处理下一项”执行。
 
-- 生产分支：`main`（合并本次设计分支后生效）
-- 根目录：仓库根目录
-- 构建命令：`npm run build`
-- 构建输出目录：`out`
-- 环境变量：`NODE_VERSION=22`
+单独修改页面可执行 `npm run dev:web` 或 `npm run dev:admin`；Next 开发服务器只提供页面，完整 API 联调使用上述三个 Worker 预览。
 
-部署前运行 `npm run build && npm run deploy:check`。本次设计分支不会自动替换生产分支；审阅并合并后，Cloudflare 按现有 Git 部署配置构建。
+## 云端部署
 
-
-## 用户提供的 Linear 排版规格
-
-Inter Variable 随站点自托管，中文使用系统字体回退。主标题 64/64px、510 字重、-1.408px 字距；介绍标题 48/48px、510 字重、-1.056px 字距；正文 16/24px；辅助说明 15/24px、-0.165px 字距；导航 13/19.5px。启用 cv01、ss03。
-
-保留远端最新浅色工作台及可折叠导航，因此主标题保持深色以确保对比度，未将暗色官网的白色主文字直接用于白底。次级文字使用提供的 #8a8f98。沿用当前项目 760px 窄屏断点，主标题为采样的 38/41.8px、-0.836px；窄屏介绍标题适配为 32/35.2px。断点与窄屏介绍标题不是官网实测值。
+参见 [三个项目部署说明](docs/deployment.md)。无需购买域名；三个 Worker 可使用各自的 workers.dev 地址。生产数据库尚未在仓库中配置，不能把本地测试状态当作云端上线。

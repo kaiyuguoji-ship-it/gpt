@@ -2,17 +2,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
-import handler from '../server/index.ts';
-import { processNextJob } from '../server/admin.ts';
-import { emptyBrief, missingConditions, statusForBrief, suggestBrief, validateBrief } from '../lib/market.ts';
-import type { Database, Env, Statement } from '../server/types.ts';
-import { authenticated, sessionCookie } from '../server/auth.ts';
+import handler from '../apps/api/src/index.ts';
+import { processNextJob } from '../apps/api/src/admin.ts';
+import { emptyBrief, missingConditions, statusForBrief, suggestBrief, validateBrief } from '../packages/shared/market.ts';
+import type { Database, Env, Statement } from '../apps/api/src/types.ts';
+import { authenticated, sessionCookie } from '../apps/api/src/auth.ts';
 
 const complete = { ...emptyBrief, budgetCny: 100000, targetCount: 5, marketplace: 'US', fulfillment: 'FBA', allocation: 'alternatives', budgetScope: 'all_in' };
 function setup() {
   const sqlite = new DatabaseSync(':memory:');
-  sqlite.exec(readFileSync(new URL('../migrations/0001_market_research.sql', import.meta.url), 'utf8'));
-  sqlite.exec(readFileSync(new URL('../migrations/0002_admin.sql', import.meta.url), 'utf8'));
+  sqlite.exec(readFileSync(new URL('../apps/api/migrations/0001_market_research.sql', import.meta.url), 'utf8'));
+  sqlite.exec(readFileSync(new URL('../apps/api/migrations/0002_admin.sql', import.meta.url), 'utf8'));
   const database: Database = {
     prepare(sql) {
       let args: unknown[] = [];
@@ -25,12 +25,12 @@ function setup() {
     },
     async batch(statements) { sqlite.exec('BEGIN'); try { const result = []; for (const s of statements) result.push(await s.run()); sqlite.exec('COMMIT'); return result; } catch (e) { sqlite.exec('ROLLBACK'); throw e; } },
   };
-  const env: Env = { DB: database, WORKSPACE_ACCESS_KEY: 'test-only-secret-at-least-32-characters', ASSETS: { fetch: async () => new Response('static asset') } };
+  const env: Env = { DB: database, WORKSPACE_ACCESS_KEY: 'test-only-secret-at-least-32-characters', ADMIN_ACCESS_KEY: 'test-admin-secret-at-least-32-characters' };
   let cookie = '';
   async function request(path: string, method = 'GET', data?: unknown, headers: Record<string,string> = {}) {
     return handler.fetch(new Request(`http://localhost${path}`, { method, headers: { 'Content-Type': 'application/json', Origin: 'http://localhost', Cookie: cookie, ...headers }, ...(data === undefined ? {} : { body: JSON.stringify(data) }) }), env);
   }
-  async function login() { const r = await request('/api/session', 'POST', { key: env.WORKSPACE_ACCESS_KEY }); cookie = r.headers.get('Set-Cookie')!.split(';')[0]; return r; }
+  async function login(admin = true) { const r = await request('/api/session', 'POST', { key: env.WORKSPACE_ACCESS_KEY }); cookie = r.headers.get('Set-Cookie')!.split(';')[0]; if(admin) { const a=await request('/api/admin/session','POST',{key:env.ADMIN_ACCESS_KEY}); cookie += '; '+a.headers.get('Set-Cookie')!.split(';')[0]; } return r; }
   return { env, request, login, sqlite, close: () => sqlite.close() };
 }
 
@@ -53,9 +53,9 @@ test('session cannot be forged and has secure cookie flags', async () => {
   assert.equal(await authenticated(new Request('https://example.com', { headers: { Cookie: cookie.split(';')[0] } }), 'different-key'), false);
   assert.equal(await authenticated(new Request('https://example.com', { headers: { Cookie: cookie.split(';')[0] } }), 'test-key'), true);
 });
-test('static pages continue to work without backend configuration', async () => {
+test('API no longer serves frontend assets', async () => {
   const f = setup(); delete f.env.DB; delete f.env.WORKSPACE_ACCESS_KEY;
-  assert.equal(await (await f.request('/centers/1/')).text(), 'static asset');
+  assert.equal((await f.request('/centers/1/')).status, 404);
   assert.equal((await f.request('/api/research/tasks')).status, 503); f.close();
 });
 test('requires authentication and rejects cross-origin writes', async () => {
@@ -157,3 +157,12 @@ test('admin query validation and pagination are bounded',async()=>{
  for(const url of ['/api/admin/tasks?page=-1','/api/admin/tasks?status=running','/api/admin/logs?page=1.5'])assert.equal((await f.request(url)).status,400);
  assert.equal((await (await f.request('/api/admin/tasks?q=%27')).json() as {total:number}).total,0);f.close();
 });
+
+ test('business credentials cannot access admin APIs or mint admin sessions', async()=>{
+ const f=setup();await f.login(false);
+ assert.equal((await f.request('/api/admin/overview')).status,401);
+ assert.equal((await f.request('/api/admin/session','POST',{key:f.env.WORKSPACE_ACCESS_KEY})).status,401);
+ assert.equal((await f.request('/api/research/tasks')).status,200);
+ assert.equal((await f.request('/')).status,404);
+ f.close();
+ });

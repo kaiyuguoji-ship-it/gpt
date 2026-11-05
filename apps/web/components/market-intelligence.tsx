@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowRight, CheckCircle2, Circle, LockKeyhole, RefreshCw, Search, TrendingUp } from 'lucide-react';
-import { emptyBrief, marketplaces, missingConditions, skills, statusLabels, suggestBrief } from '@/lib/market';
-import type { Brief, Task, TaskDetail } from '@/lib/market';
+import { emptyBrief, marketplaces, missingConditions, skills, statusLabels, suggestBrief } from '@swanyo/shared/market';
+import type { Brief, Task, TaskDetail } from '@swanyo/shared/market';
 
 type Health = { backend: boolean; storage: boolean; accessConfigured: boolean; model: boolean; marketData: boolean; runner: boolean };
 async function api<T>(path: string, init?: RequestInit): Promise<T> {

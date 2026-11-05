@@ -1,2 +1,0 @@
-# Copy to .dev.vars (ignored by Git). Use a random value with at least 32 characters.
-WORKSPACE_ACCESS_KEY="replace-with-a-random-private-workspace-key"

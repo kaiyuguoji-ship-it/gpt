@@ -11,15 +11,18 @@ export async function sameSecret(a: string, b: string) {
   for (let i = 0; i < aa.length; i++) diff |= aa[i] ^ bb[i];
   return diff === 0;
 }
-export async function sessionCookie(secret: string, secure: boolean) {
+export async function sessionCookie(secret: string, secure: boolean, admin = false) {
   const payload = `${Date.now() + 8 * 60 * 60 * 1000}.${crypto.randomUUID()}`;
-  return `${COOKIE}=${payload}.${await signature(payload, secret)}; HttpOnly; SameSite=Strict; Path=/api; Max-Age=28800${secure ? '; Secure' : ''}`;
+  return `${admin ? 'swanyo_admin_session' : COOKIE}=${payload}.${await signature(payload, secret)}; HttpOnly; SameSite=Strict; Path=/api; Max-Age=28800${secure ? '; Secure' : ''}`;
 }
 export const clearCookie = `${COOKIE}=; HttpOnly; SameSite=Strict; Path=/api; Max-Age=0`;
-export async function authenticated(request: Request, secret: string) {
-  const token = request.headers.get('Cookie')?.split(';').map(s => s.trim()).find(s => s.startsWith(`${COOKIE}=`))?.slice(COOKIE.length + 1);
+export async function authenticated(request: Request, secret: string, admin = false) {
+  const name = admin ? 'swanyo_admin_session' : COOKIE;
+  const token = request.headers.get('Cookie')?.split(';').map(s => s.trim()).find(s => s.startsWith(`${name}=`))?.slice(name.length + 1);
   if (!token || token.length > 180) return false;
   const parts = token.split('.');
   if (parts.length !== 3 || !/^\d+$/.test(parts[0]) || Number(parts[0]) <= Date.now() || Number(parts[0]) > Date.now() + 28800000) return false;
   return sameSecret(parts[2], await signature(`${parts[0]}.${parts[1]}`, secret));
 }
+
+export const clearAdminCookie = clearCookie.replace('swanyo_session=', 'swanyo_admin_session=');

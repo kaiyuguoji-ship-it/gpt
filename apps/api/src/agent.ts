@@ -1,4 +1,4 @@
-import { skills } from '../lib/market.ts';
+import { skills } from '../../../packages/shared/market.ts';
 // Runtime contract for the future model runner. This release creates a plan, not model calls.
 export const marketAgent = {
   id: 'market-opportunity-researcher', version: '1.0.0', runnerEnabled: false,
