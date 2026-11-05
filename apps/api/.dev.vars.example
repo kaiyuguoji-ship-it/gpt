@@ -1,0 +1,3 @@
+# Replace both values with DIFFERENT random values, at least 32 characters each.
+WORKSPACE_ACCESS_KEY=
+ADMIN_ACCESS_KEY=

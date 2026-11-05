@@ -1,40 +1,48 @@
 # SWANYO OS
 
-Next.js App Router + TypeScript + Tailwind CSS 4 + Lucide React.
+一个仓库，三个独立构建、独立部署的项目。当前提供业务工作区、研究需求存储、管理控制台及数据库诊断作业；Agent / Skill / MCP 尚未接入执行。
 
-## 当前版本
+| 项目 | 目录 | 职责 | 云端名称 |
+| --- | --- | --- | --- |
+| 业务前端 | `apps/web` | 九大业务中心、研究需求表单 | `swanyo-web` |
+| 管理后台 | `apps/admin` | 独立管理员登录、任务、作业、设置、日志 | `swanyo-admin` |
+| 后端服务 | `apps/api` | 鉴权、API、数据库、定时作业 | `swanyo-api` |
+| 共用代码 | `packages/shared` | 数据类型、校验规则、轻量转发 | 不单独部署 |
 
-- 九大独立业务应用入口。
-- Apple-inspired 留白与排版，半透明磨砂玻璃侧边导航。
-- 主工作区保持纯白，卡片和分割线使用轻量浅灰。
-- 响应式导航与应用页面。
-- 市场情报、产品研发、商业决策、视觉创意、Listing SEO、广告运营、FBA 库存、供应链运营、数据审计九大应用。
-- 当前仍为前端架构与视觉原型；不展示虚构的实时销售、库存或 Agent 数据，也未连接 Amazon API、数据库或模型服务。
+前端各自输出静态页面，并用极小的 Worker 将同源 `/api/*` 请求转发到 API Service Binding。数据库、业务逻辑、密钥只存在 API 项目。业务前端不发布管理页面，并拒绝转发管理接口；后端也独立校验管理员会话。
 
-## 本地运行
+## 当前市场情报页面：前端演示
 
-需要 Node.js >= 20.9。
+业务网站 `/centers/1/` 当前按效果图提供四个研究模块、筛选表单、演示任务、研究历史及报告结构。记录只保存在当前浏览器，未连接真实后端、Agent 或亚马逊数据。详见 [前端演示说明](docs/market-frontend-demo.md)。管理后台与 API 是独立项目，其能力不代表业务演示页面已接入真实执行。
+
+仅发布这次业务前端，可在 **Cloudflare Pages** 连接本仓库，构建根目录选仓库根目录，设置 `NODE_VERSION=24`，构建命令填写 `npm run build -w @swanyo/web`，输出目录填写 `apps/web/out`。使用 npm 11.19.1 安装统一锁文件；如构建环境的 npm 版本较旧，可使用构建命令 `npx --yes npm@11.19.1 ci && npm run build -w @swanyo/web`。Pages 静态发布无需绑定 API 服务。
+
+## 安装与验证
+
+使用 Node.js 24 和 npm 11.19.1。在仓库根目录执行：
 
 ```sh
 npm ci
-npm run dev
+npm run typecheck
+npm test
+npm run build
+npm run deploy:check
 ```
 
-浏览器访问 http://localhost:3000。静态生产构建：`npm run build`，输出到 `out/`。
+## 本地完整环境
 
-## Cloudflare Pages
+```sh
+cp apps/api/.dev.vars.example apps/api/.dev.vars
+# 编辑上面的文件，设置两条不同的随机密钥（各至少 32 字符）
+npm run db:local -w @swanyo/api
+npm run build
+npm run preview
+```
 
-- 生产分支：`main`（合并本次设计分支后生效）
-- 根目录：仓库根目录
-- 构建命令：`npm run build`
-- 构建输出目录：`out`
-- 环境变量：`NODE_VERSION=22`
+业务网站 `http://127.0.0.1:8791/`；管理后台 `http://127.0.0.1:8792/`；API `http://127.0.0.1:8790/api/health`。使用各自密钥登录。关闭本地进程后，预览地址不再可用。本地诊断作业通过管理界面“处理下一项”执行。
 
-部署前运行 `npm run build && npm run deploy:check`。本次设计分支不会自动替换生产分支；审阅并合并后，Cloudflare 按现有 Git 部署配置构建。
+单独修改页面可执行 `npm run dev:web` 或 `npm run dev:admin`；Next 开发服务器只提供页面，完整 API 联调使用上述三个 Worker 预览。
 
+## 云端部署
 
-## 用户提供的 Linear 排版规格
-
-Inter Variable 随站点自托管，中文使用系统字体回退。主标题 64/64px、510 字重、-1.408px 字距；介绍标题 48/48px、510 字重、-1.056px 字距；正文 16/24px；辅助说明 15/24px、-0.165px 字距；导航 13/19.5px。启用 cv01、ss03。
-
-保留远端最新浅色工作台及可折叠导航，因此主标题保持深色以确保对比度，未将暗色官网的白色主文字直接用于白底。次级文字使用提供的 #8a8f98。沿用当前项目 760px 窄屏断点，主标题为采样的 38/41.8px、-0.836px；窄屏介绍标题适配为 32/35.2px。断点与窄屏介绍标题不是官网实测值。
+参见 [三个项目部署说明](docs/deployment.md)。无需购买域名；三个 Worker 可使用各自的 workers.dev 地址。生产数据库尚未在仓库中配置，不能把本地测试状态当作云端上线。

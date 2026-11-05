@@ -1,0 +1,38 @@
+name: Project checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm install --global npm@11.19.1
+      - run: npm ci
+      - run: npm test
+  project:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [web, admin, api]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm install --global npm@11.19.1
+      - run: npm ci
+      - run: npm run typecheck -w @swanyo/${{ matrix.app }}
+      - run: npm run build -w @swanyo/${{ matrix.app }}
+      - run: npm run deploy:check -w @swanyo/${{ matrix.app }}
+        env:
+          WRANGLER_SEND_METRICS: 'false'

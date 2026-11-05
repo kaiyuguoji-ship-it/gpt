@@ -1,0 +1,10 @@
+{
+  "name": "@swanyo/shared",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./market": "./market.ts",
+    "./admin": "./admin.ts"
+  }
+}

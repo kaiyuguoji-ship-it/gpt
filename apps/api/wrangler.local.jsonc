@@ -1,0 +1,22 @@
+{
+  "name": "swanyo-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-04",
+  "triggers": {
+    "crons": [
+      "* * * * *"
+    ]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "swanyo-market-local",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "dev": {
+    "ip": "127.0.0.1",
+    "port": 8790
+  }
+}

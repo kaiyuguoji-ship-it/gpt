@@ -12,7 +12,12 @@ export function SidebarNavigation() {
   const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
-    try { setCollapsed(window.localStorage.getItem('swanyo-sidebar-collapsed') === 'true'); } catch { /* Storage may be disabled. */ }
+    const narrow = window.matchMedia('(max-width: 760px)');
+    try { setCollapsed(narrow.matches || window.localStorage.getItem('swanyo-sidebar-collapsed') === 'true'); }
+    catch { setCollapsed(narrow.matches); }
+    const onResize = (event: MediaQueryListEvent) => { if (event.matches) setCollapsed(true); };
+    narrow.addEventListener('change', onResize);
+    return () => narrow.removeEventListener('change', onResize);
   }, []);
 
   function toggleSidebar() {

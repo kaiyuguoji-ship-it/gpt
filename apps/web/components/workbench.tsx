@@ -3,10 +3,12 @@
 import Link from 'next/link';
 import { ArrowRight, ArrowUpRight, Sparkles, Activity, Boxes, Truck, Image as ImageIcon, Search, ShieldCheck, Microscope, Wallet, TrendingUp, Megaphone } from 'lucide-react';
 import { centers } from '@/lib/centers';
+import { MarketIntelligence } from '@/components/market-intelligence';
 
 const icons = [TrendingUp, Microscope, Wallet, ImageIcon, Search, Megaphone, Boxes, Truck, ShieldCheck];
 
 export function Workbench({ centerId }: { centerId?: number }) {
+  if (centerId === 1) return <MarketIntelligence />;
   const center = centerId ? centers[centerId - 1] : null;
   if (center) {
     const Icon = center.icon;

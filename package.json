@@ -1,1 +1,34 @@
-{"name":"swanyo-os","version":"0.1.0","private":true,"scripts":{"dev":"next dev --webpack --hostname 0.0.0.0","build":"next build --webpack","start":"serve out","typecheck":"tsc --noEmit","deploy":"wrangler deploy --config wrangler.jsonc","deploy:check":"wrangler deploy --config wrangler.jsonc --dry-run"},"dependencies":{"@fontsource-variable/inter":"5.3.0","@radix-ui/react-slot":"^1.2.3","class-variance-authority":"^0.7.1","clsx":"^2.1.1","lucide-react":"^0.468.0","next":"^16.0.0","react":"^19.2.0","react-dom":"^19.2.0","tailwind-merge":"^3.3.0"},"devDependencies":{"@tailwindcss/postcss":"^4.1.0","@types/node":"^22.0.0","@types/react":"^19.0.0","@types/react-dom":"^19.0.0","serve":"^14.2.6","tailwindcss":"^4.1.0","typescript":"^5.9.3","wrangler":"4.157.0"}}
+{
+  "name": "swanyo-os",
+  "version": "0.2.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev -w @swanyo/web",
+    "dev:admin": "npm run dev -w @swanyo/admin -- --port 3001",
+    "dev:api": "npm run dev -w @swanyo/api",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "deploy:check": "npm run deploy:check --workspaces --if-present",
+    "deploy:web": "npm run deploy -w @swanyo/web",
+    "deploy:admin": "npm run deploy -w @swanyo/admin",
+    "deploy:api": "npm run deploy -w @swanyo/api",
+    "preview": "node scripts/preview.mjs"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.1.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "serve": "^14.2.6",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.9.3",
+    "wrangler": "4.157.0"
+  },
+  "type": "module",
+  "packageManager": "npm@11.19.1"
+}
